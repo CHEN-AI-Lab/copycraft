@@ -1,0 +1,36 @@
+{
+  "common": {
+    "appName": "CopyCraft",
+    "tagline": "Great copy, powered by AI",
+    "loading": "Generating...",
+    "error": "Something went wrong, please try again",
+    "retry": "Retry",
+    "copy": "Copy",
+    "copied": "Copied",
+    "regenerate": "Regenerate",
+    "placeholder": "Enter your ideas, keywords, or a paragraph...",
+    "selectPlatform": "Select platform",
+    "generate": "Generate Copy",
+    "result": "Result",
+    "startWriting": "Start Writing"
+  },
+  "nav": {
+    "home": "Home"
+  },
+  "platforms": {
+    "wechat": "WeChat Moments",
+    "xiaohongshu": "Xiaohongshu",
+    "weibo": "Weibo",
+    "zhihu": "Zhihu",
+    "douyin": "Douyin",
+    "general": "General"
+  },
+  "home": {
+    "title": "Make your content shine",
+    "subtitle": "Turn your ideas into platform-optimized copy with AI",
+    "cta": "Get Started Free"
+  },
+  "footer": {
+    "copyright": "© 2026 CopyCraft"
+  }
+}

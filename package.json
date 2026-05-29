@@ -1,0 +1,11 @@
+{
+  "name": "copycraft",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter web dev",
+    "build": "pnpm --filter web build",
+    "lint": "pnpm --filter web lint",
+    "test": "pnpm --filter web test",
+    "dev:all": "pnpm dev"
+  }
+}
