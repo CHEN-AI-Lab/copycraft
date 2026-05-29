@@ -26,8 +26,8 @@ export async function POST(req: NextRequest) {
     }
 
     const systemPrompt = locale === 'zh-CN'
-      ? `你是一个专业的文案写手。根据用户提供的关键词或想法，生成适合在${platformNames[platform] || '社交媒体'}平台发布的文案。`
-      : `You are a professional copywriter. Based on the user's keywords or ideas, generate copy optimized for ${platformNames[platform] || 'social media'}.`
+      ? `你是一个专业的文案写手。根据用户提供的关键词或想法，生成适合在${platformNames[platform] || '社交媒体'}平台发布的文案。直接输出文案内容，不要输出思考过程。`
+      : `You are a professional copywriter. Based on the user's keywords or ideas, generate copy optimized for ${platformNames[platform] || 'social media'}. Output only the copy, no thinking process.`
 
     const userPrompt = locale === 'zh-CN'
       ? `请为"${platformNames[platform] || '通用'}"平台创作一段文案。关键词/想法：${prompt}`
@@ -50,51 +50,21 @@ export async function POST(req: NextRequest) {
       }),
     })
 
-    const rawBody = await response.text()
-
     if (!response.ok) {
-      console.error('AI API error:', response.status, rawBody)
-      return NextResponse.json({
-        error: `AI API error: ${response.status}`,
-        debug: { status: response.status, body: rawBody, model, baseUrl }
-      }, { status: 502 })
+      const errBody = await response.text()
+      console.error('AI API error:', response.status, errBody)
+      return NextResponse.json({ error: `AI API error: ${response.status}` }, { status: 502 })
     }
 
-    let data: Record<string, unknown>
-    try {
-      data = JSON.parse(rawBody)
-    } catch {
-      return NextResponse.json({
-        error: 'Invalid JSON response from AI API',
-        debug: { rawBody, model, baseUrl }
-      }, { status: 502 })
-    }
+    const data = await response.json()
+    const message = data.choices?.[0]?.message
 
-    const text = (data as any).choices?.[0]?.message?.content || ''
-    const hasChoices = !!(data as any).choices
-
-    // Return debug info if text is empty
-    if (!text) {
-      const debugInfo = {
-        hasApiKey: !!apiKey,
-        model,
-        baseUrl,
-        responseKeys: Object.keys(data),
-        hasChoices,
-        data: JSON.stringify(data).slice(0, 500),
-        rawResponse: rawBody.slice(0, 500),
-      }
-      console.error('Empty text response:', JSON.stringify(debugInfo))
-      return NextResponse.json({
-        text: '',
-        debug: debugInfo,
-      })
-    }
+    // Some APIs put content in 'reasoning' instead of 'content'
+    const text = message?.content || message?.reasoning || ''
 
     return NextResponse.json({ text })
   } catch (e) {
     console.error('Generate error:', e)
-    const errMsg = e instanceof Error ? e.message : String(e)
-    return NextResponse.json({ error: 'Internal server error', debug: { error: errMsg } }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
