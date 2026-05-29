@@ -1,11 +1,15 @@
 {
   "name": "copycraft",
   "private": true,
+  "packageManager": "pnpm@10.6.0",
   "scripts": {
     "dev": "pnpm --filter web dev",
     "build": "pnpm --filter web build",
     "lint": "pnpm --filter web lint",
     "test": "pnpm --filter web test",
     "dev:all": "pnpm dev"
+  },
+  "devDependencies": {
+    "turbo": "^2.4.0"
   }
 }
