@@ -50,18 +50,51 @@ export async function POST(req: NextRequest) {
       }),
     })
 
+    const rawBody = await response.text()
+
     if (!response.ok) {
-      const errBody = await response.text()
-      console.error('AI API error:', response.status, errBody)
-      return NextResponse.json({ error: `AI API error: ${response.status}` }, { status: 502 })
+      console.error('AI API error:', response.status, rawBody)
+      return NextResponse.json({
+        error: `AI API error: ${response.status}`,
+        debug: { status: response.status, body: rawBody, model, baseUrl }
+      }, { status: 502 })
     }
 
-    const data = await response.json()
-    const text = data.choices?.[0]?.message?.content || ''
+    let data: Record<string, unknown>
+    try {
+      data = JSON.parse(rawBody)
+    } catch {
+      return NextResponse.json({
+        error: 'Invalid JSON response from AI API',
+        debug: { rawBody, model, baseUrl }
+      }, { status: 502 })
+    }
+
+    const text = (data as any).choices?.[0]?.message?.content || ''
+    const hasChoices = !!(data as any).choices
+
+    // Return debug info if text is empty
+    if (!text) {
+      const debugInfo = {
+        hasApiKey: !!apiKey,
+        model,
+        baseUrl,
+        responseKeys: Object.keys(data),
+        hasChoices,
+        data: JSON.stringify(data).slice(0, 500),
+        rawResponse: rawBody.slice(0, 500),
+      }
+      console.error('Empty text response:', JSON.stringify(debugInfo))
+      return NextResponse.json({
+        text: '',
+        debug: debugInfo,
+      })
+    }
 
     return NextResponse.json({ text })
   } catch (e) {
     console.error('Generate error:', e)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    const errMsg = e instanceof Error ? e.message : String(e)
+    return NextResponse.json({ error: 'Internal server error', debug: { error: errMsg } }, { status: 500 })
   }
 }
