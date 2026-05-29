@@ -26,8 +26,10 @@ export async function POST(req: NextRequest) {
     }
 
     const systemPrompt = locale === 'zh-CN'
-      ? `你是一个专业的文案写手。根据用户提供的关键词或想法，生成适合在${platformNames[platform] || '社交媒体'}平台发布的文案。直接输出文案内容，不要输出思考过程。`
-      : `You are a professional copywriter. Based on the user's keywords or ideas, generate copy optimized for ${platformNames[platform] || 'social media'}. Output only the copy, no thinking process.`
+      ? `你是一个专业的文案写手。直接输出文案，不要输出任何思考过程、分析或注释。只输出文案本身。
+当前平台：${platformNames[platform] || '社交媒体'}`
+      : `You are a professional copywriter. Output ONLY the copy text. No thinking process, analysis, or notes.
+Platform: ${platformNames[platform] || 'social media'}`
 
     const userPrompt = locale === 'zh-CN'
       ? `请为"${platformNames[platform] || '通用'}"平台创作一段文案。关键词/想法：${prompt}`
