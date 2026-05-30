@@ -17,98 +17,59 @@ const toneInstructions: Record<string, string> = {
   formal: '语气正式专业，适合商务场合',
 }
 
-function hasEmoji(text: string): boolean {
-  const emojiRanges = [
-    [0x1F300, 0x1FAFF],
-    [0x2600, 0x27BF],
-    [0xFE00, 0xFE0F],
-    [0x1F600, 0x1F64F],
-    [0x1F680, 0x1F6FF],
-    [0x200D, 0x200D],
-  ]
-  for (let i = 0; i < text.length; i++) {
-    const code = text.charCodeAt(i)
-    // Handle surrogate pairs
-    if (code >= 0xD800 && code <= 0xDBFF && i + 1 < text.length) {
-      const next = text.charCodeAt(i + 1)
-      if (next >= 0xDC00 && next <= 0xDFFF) {
-        const full = (code - 0xD800) * 0x400 + (next - 0xDC00) + 0x10000
-        for (const [start, end] of emojiRanges) {
-          if (full >= start && full <= end) return true
-        }
-      }
-    } else if (code >= 0x2600 && code <= 0x27BF) {
-      return true
+function extractCopy(raw: string): string {
+  // The model outputs thinking process (mostly English) followed by actual copy (Chinese + emoji).
+  // Strategy: find the last meaningful block with Chinese text.
+  const lines = raw.split('\n')
+  const chineseLineIdx: number[] = []
+
+  lines.forEach((line, i) => {
+    const trimmed = line.trim()
+    if (!trimmed) return
+    // Check for Chinese characters
+    if (/[\u4e00-\u9fff]/.test(trimmed)) {
+      chineseLineIdx.push(i)
     }
+  })
+
+  if (chineseLineIdx.length === 0) {
+    // No Chinese at all - return raw (might be English copy)
+    return raw.trim()
   }
-  return false
-}
 
-function hasChinese(text: string): boolean {
-  return /[\u4e00-\u9fff]/.test(text)
-}
+  // The actual copy usually starts near the last block of Chinese lines
+  // Find the last sequence of consecutive Chinese lines
+  let lastBlockStart = chineseLineIdx[0]
+  let currentBlockStart = chineseLineIdx[0]
 
-function cleanSenseTimeOutput(raw: string): string {
-  let text = raw
-
-  // Try to find sections that contain the actual copy
-  const markers = [
-    /^Final Output Generation.*$/m,
-    /^\*Draft\*:?\s*\n?/,
-    /^\*\*Draft\*\*:?\s*\n?/,
-    /^Draft:?\s*\n?/,
-    /^Here('s| is) .*:?\n?$/m,
-  ]
-
-  for (const marker of markers) {
-    const match = text.match(marker)
-    if (match && match.index !== undefined) {
-      text = text.slice(match.index + match[0].length).trim()
-      break
+  for (let i = 1; i < chineseLineIdx.length; i++) {
+    if (chineseLineIdx[i] - chineseLineIdx[i - 1] <= 2) {
+      // Same block
+    } else {
+      // New block starts
+      currentBlockStart = chineseLineIdx[i]
     }
+    lastBlockStart = currentBlockStart
   }
 
-  if (text === raw) {
-    // Fallback: find first line with emoji + Chinese text (likely the title)
-    const lines = raw.split('\n')
-    const emojiLineIdx = lines.findIndex((l) => {
-      const trimmed = l.trim()
-      return hasEmoji(trimmed) && hasChinese(trimmed) && trimmed.length > 3
-    })
-    if (emojiLineIdx > 0 && emojiLineIdx < lines.length / 2) {
-      text = lines.slice(emojiLineIdx).join('\n').trim()
-    }
-  }
+  // Take from the start of the last Chinese block to the end
+  const result = lines.slice(lastBlockStart).join('\n').trim()
 
-  // Remove review sections at the end
-  const reviewIdx = text.search(/\n\d+\.\s+\*\*Review/)
-  if (reviewIdx !== -1) {
-    text = text.slice(0, reviewIdx).trim()
-  }
-
-  // Filter out thinking-process lines
-  text = text
+  // Clean up any remaining thinking artifacts within the result
+  return result
     .split('\n')
     .filter((l) => {
       const t = l.trim()
-      if (!t) return true
-      if (/^\d+\.\s+\*\*(Analyze|Understand|Determine|Refine|Tone|Platform|Structure|Idea|Check)/.test(t)) return false
-      if (/^(Persona|Role|Task|Constraint|Output|Topic|Keywords)/i.test(t) && t.length < 60) return false
-      if (/^\*{1,2}\s*(Title|Intro|Body|Outro|Tags|Opening|Closing|Recipe|Drink)/i.test(t)) return false
-      // Catch lines like "*   **Role:** ..." in senseTime output
-      if (/^\*\s+\*\*[A-Z][a-z]+:\*\*/.test(t)) return false
-      if (/^\*\*Draft/i.test(t)) return false
-      if (/^Thinking Process/i.test(t)) return false
+      // Remove remaining English-only lines (thinking artifacts)
+      if (!/[\u4e00-\u9fff]/.test(t) && t.length > 10) {
+        if (/^[*\d\s]/.test(t)) return false
+        return false
+      }
       return true
     })
     .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
     .trim()
-
-  // Strip remaining numbered lines and extra whitespace
-  text = text.replace(/^\d+\.\s+.*$/gm, '').trim()
-  text = text.replace(/\n{3,}/g, '\n\n').trim()
-
-  return text
 }
 
 export async function POST(req: NextRequest) {
@@ -130,12 +91,12 @@ export async function POST(req: NextRequest) {
     const toneStr = toneInstructions[tone as string] || toneInstructions.normal
 
     const systemPrompt = locale === 'zh-CN'
-      ? `你是一个专业的文案写手。${toneStr}。\n当前平台：${platformStr}\n直接输出文案，不要输出思考过程。`
-      : `You are a professional copywriter. Tone: ${toneStr.replace('语气', '').trim() || 'natural and fluent'}.\nPlatform: ${platformStr}\nOutput ONLY the copy text.`
+      ? `你是一个文案写手。${toneStr}。平台：${platformStr}\n直接输出文案。`
+      : `You are a copywriter. Tone: ${toneStr.replace('语气', '').trim() || 'natural'}.\nPlatform: ${platformStr}\nOutput copy only.`
 
     const userPrompt = locale === 'zh-CN'
-      ? `请为"${platformStr}"平台创作一段文案。关键词/想法：${prompt}`
-      : `Write copy for ${platformStr} platform. Keywords/ideas: ${prompt}`
+      ? `关键词/想法：${prompt}`
+      : `Keywords/ideas: ${prompt}`
 
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
@@ -149,7 +110,7 @@ export async function POST(req: NextRequest) {
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        max_tokens: maxTokens || 300,
+        max_tokens: maxTokens || 500,
         temperature: 0.8,
       }),
     })
@@ -164,7 +125,7 @@ export async function POST(req: NextRequest) {
     const message = data.choices?.[0]?.message
     const rawText = message?.content || message?.reasoning || ''
 
-    const text = cleanSenseTimeOutput(rawText)
+    const text = extractCopy(rawText)
 
     return NextResponse.json({ text })
   } catch (e) {
