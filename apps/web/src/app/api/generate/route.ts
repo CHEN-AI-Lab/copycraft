@@ -17,6 +17,96 @@ const toneInstructions: Record<string, string> = {
   formal: '语气正式专业，适合商务场合',
 }
 
+function hasEmoji(text: string): boolean {
+  const emojiRanges = [
+    [0x1F300, 0x1FAFF],
+    [0x2600, 0x27BF],
+    [0xFE00, 0xFE0F],
+    [0x1F600, 0x1F64F],
+    [0x1F680, 0x1F6FF],
+    [0x200D, 0x200D],
+  ]
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i)
+    // Handle surrogate pairs
+    if (code >= 0xD800 && code <= 0xDBFF && i + 1 < text.length) {
+      const next = text.charCodeAt(i + 1)
+      if (next >= 0xDC00 && next <= 0xDFFF) {
+        const full = (code - 0xD800) * 0x400 + (next - 0xDC00) + 0x10000
+        for (const [start, end] of emojiRanges) {
+          if (full >= start && full <= end) return true
+        }
+      }
+    } else if (code >= 0x2600 && code <= 0x27BF) {
+      return true
+    }
+  }
+  return false
+}
+
+function hasChinese(text: string): boolean {
+  return /[\u4e00-\u9fff]/.test(text)
+}
+
+function cleanSenseTimeOutput(raw: string): string {
+  let text = raw
+
+  // Try to find sections that contain the actual copy
+  const markers = [
+    /^Final Output Generation.*$/m,
+    /^\*Draft\*:?\s*\n?/,
+    /^\*\*Draft\*\*:?\s*\n?/,
+    /^Draft:?\s*\n?/,
+    /^Here('s| is) .*:?\n?$/m,
+  ]
+
+  for (const marker of markers) {
+    const match = text.match(marker)
+    if (match && match.index !== undefined) {
+      text = text.slice(match.index + match[0].length).trim()
+      break
+    }
+  }
+
+  if (text === raw) {
+    // Fallback: find first line with emoji + Chinese text (likely the title)
+    const lines = raw.split('\n')
+    const emojiLineIdx = lines.findIndex((l) => {
+      const trimmed = l.trim()
+      return hasEmoji(trimmed) && hasChinese(trimmed) && trimmed.length > 3
+    })
+    if (emojiLineIdx > 0 && emojiLineIdx < lines.length / 2) {
+      text = lines.slice(emojiLineIdx).join('\n').trim()
+    }
+  }
+
+  // Remove review sections at the end
+  const reviewIdx = text.search(/\n\d+\.\s+\*\*Review/)
+  if (reviewIdx !== -1) {
+    text = text.slice(0, reviewIdx).trim()
+  }
+
+  // Filter out thinking-process lines
+  text = text
+    .split('\n')
+    .filter((l) => {
+      const t = l.trim()
+      if (!t) return true
+      if (/^\d+\.\s+\*\*(Analyze|Understand|Determine|Refine|Tone|Platform|Structure|Idea|Check)/.test(t)) return false
+      if (/^(Persona|Role|Task|Constraint|Output|Topic|Keywords)/i.test(t) && t.length < 60) return false
+      if (/^\*{1,2}\s*(Title|Intro|Body|Outro|Tags|Opening|Closing|Recipe|Drink)/i.test(t)) return false
+      return true
+    })
+    .join('\n')
+    .trim()
+
+  // Strip remaining numbered lines and extra whitespace
+  text = text.replace(/^\d+\.\s+.*$/gm, '').trim()
+  text = text.replace(/\n{3,}/g, '\n\n').trim()
+
+  return text
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { prompt, platform, locale, tone, maxTokens } = await req.json()
@@ -35,13 +125,9 @@ export async function POST(req: NextRequest) {
     const platformStr = platformNames[platform as string] || '社交媒体'
     const toneStr = toneInstructions[tone as string] || toneInstructions.normal
 
-    // Use a delimiter marker to extract just the copy text from the response
-    const DELIMITER_START = '<<<COPY_START>>>'
-    const DELIMITER_END = '<<<COPY_END>>>'
-
     const systemPrompt = locale === 'zh-CN'
-      ? `你是一个专业的文案写手。\n约束：\n1. ${toneStr}\n2. 在文案开头加上 ${DELIMITER_START}，结尾加上 ${DELIMITER_END}\n3. 两个标记之间只放文案正文，不放任何思考过程\n4. 平台：${platformStr}`
-      : `You are a professional copywriter.\nRules:\n1. Tone: ${toneStr.replace('语气', '').trim() || 'natural and fluent'}\n2. Start copy with ${DELIMITER_START} and end with ${DELIMITER_END}\n3. No thinking process between the markers\n4. Platform: ${platformStr}`
+      ? `你是一个专业的文案写手。${toneStr}。\n当前平台：${platformStr}\n直接输出文案，不要输出思考过程。`
+      : `You are a professional copywriter. Tone: ${toneStr.replace('语气', '').trim() || 'natural and fluent'}.\nPlatform: ${platformStr}\nOutput ONLY the copy text.`
 
     const userPrompt = locale === 'zh-CN'
       ? `请为"${platformStr}"平台创作一段文案。关键词/想法：${prompt}`
@@ -74,31 +160,7 @@ export async function POST(req: NextRequest) {
     const message = data.choices?.[0]?.message
     const rawText = message?.content || message?.reasoning || ''
 
-    // Extract text between delimiters
-    const startIdx = rawText.indexOf(DELIMITER_START)
-    const endIdx = rawText.indexOf(DELIMITER_END)
-
-    let text = ''
-    if (startIdx !== -1 && endIdx !== -1) {
-      text = rawText.slice(startIdx + DELIMITER_START.length, endIdx).trim()
-    } else if (startIdx !== -1) {
-      text = rawText.slice(startIdx + DELIMITER_START.length).trim()
-    } else if (endIdx !== -1) {
-      text = rawText.slice(0, endIdx).trim()
-    } else if (message?.content) {
-      // If content field is populated directly, use it
-      text = message.content
-    } else {
-      // Fallback: use first half of reasoning (before the actual thinking kicks in, it outputs copy)
-      // This rarely works well but is better than nothing
-      text = rawText
-    }
-
-    // Clean up any remaining thinking artifacts
-    text = text
-      .replace(/^#{1,6}\s+.*$/gm, '')  // Remove markdown headers
-      .replace(/^\*{1,2}.*\*{1,2}$/gm, '')  // Remove bold/italic lines
-      .trim()
+    const text = cleanSenseTimeOutput(rawText)
 
     return NextResponse.json({ text })
   } catch (e) {
