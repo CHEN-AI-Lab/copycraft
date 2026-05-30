@@ -17,6 +17,47 @@ const toneLabels: Record<string, string> = {
   formal: '语气正式专业，适合商务场合。',
 }
 
+function extractCopy(raw: string): string {
+  // Strip "Thinking Process:" header
+  let text = raw.replace(/^Thinking Process:?\s*/im, '').trim()
+  const lines = text.split('\n')
+
+  // Strategy 1: Find *Draft: marker, extract content until next numbered step
+  const draftIdx = lines.findIndex((l) => /^\s*\*{1,2}Draft\*{0,2}:?\s/i.test(l.trim()))
+  if (draftIdx !== -1) {
+    const afterDraft = lines.slice(draftIdx + 1)
+    const nextStepIdx = afterDraft.findIndex((l) => /^\d+\.\s+\*\*/.test(l.trim()))
+    const endIdx = nextStepIdx !== -1 ? nextStepIdx : afterDraft.length
+    const copy = afterDraft
+      .slice(0, endIdx)
+      .join('\n')
+      .replace(/^\s*\*{0,2}\s*Title:\s*/gm, '')
+      .replace(/^\s*\*{0,2}\s*Content:\s*/gm, '')
+      .trim()
+    if (copy) return copy
+  }
+
+  // Strategy 2: Find last line with emoji-like + Chinese text (skip thinking lines)
+  let copyStart = -1
+  const emojiPattern = /[🍋🍃🧊🥤🍹🌿✨🧡🌟💡🎉📸🏔️🥾💖💕🫠🌞❄️💧🍯💡#]/
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim()
+    if (/^[*\d]/.test(trimmed)) continue // skip thinking lines
+    if (emojiPattern.test(trimmed) && /[\u4e00-\u9fff]/.test(trimmed)) {
+      copyStart = i
+    }
+  }
+
+  if (copyStart !== -1) {
+    const result = lines.slice(copyStart).join('\n').trim()
+    // Remove any trailing numbered steps
+    return result.replace(/\n\d+\.\s+\*\*[\s\S]*$/, '').trim()
+  }
+
+  // Strategy 3: Fallback - return raw with header stripped
+  return text
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { prompt, platform, locale, tone, maxTokens } = await req.json()
@@ -70,37 +111,7 @@ export async function POST(req: NextRequest) {
     const message = data.choices?.[0]?.message
     const rawText = message?.content || message?.reasoning || ''
 
-    // Extract copy: most SenseTime output puts thinking first, then actual copy
-    // Strategy: find first line starting with emoji + Chinese (the social media title)
-    const lines = rawText.split('\n')
-    let copyStartIdx = -1
-    for (let i = 0; i < lines.length; i++) {
-      const trimmed = lines[i].trim()
-      // Skip thinking process lines (start with * or digit)
-      if (/^[*\d]/.test(trimmed)) continue
-      if (/^[🍋🍃🧊🥤🍹🌿✨🧡🌟💡🎉📸🏔️🥾💖💕🫠🌞❄️💧🍯💡]/.test(trimmed) && /[\u4e00-\u9fff]/.test(trimmed)) {
-        copyStartIdx = i
-        break
-      }
-    }
-
-    // Also look for "#" hashtag lines as fallback
-    let hashStartIdx = -1
-    if (copyStartIdx === -1) {
-      for (let i = 0; i < lines.length; i++) {
-        const trimmed = lines[i].trim()
-        if (/^[*\d]/.test(trimmed)) continue
-        if (/^#/.test(trimmed) && /[\u4e00-\u9fff]/.test(trimmed)) {
-          hashStartIdx = i
-          break
-        }
-      }
-    }
-
-    const startLine = copyStartIdx !== -1 ? copyStartIdx : hashStartIdx
-    const text = startLine !== -1
-      ? lines.slice(startLine).join('\n').trim()
-      : rawText.replace(/^Thinking Process:?\s*/im, '').trim()
+    const text = extractCopy(rawText)
 
     return NextResponse.json({ text })
   } catch (e) {
