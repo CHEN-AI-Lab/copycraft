@@ -9,13 +9,35 @@
     "copied": "Copied",
     "regenerate": "Regenerate",
     "placeholder": "Enter your ideas, keywords, or a paragraph...",
-    "selectPlatform": "Select platform",
+    "selectPlatform": "Platform",
+    "selectTone": "Tone",
+    "selectLength": "Length",
     "generate": "Generate Copy",
     "result": "Result",
-    "startWriting": "Start Writing"
+    "startWriting": "Start Writing",
+    "saveImage": "Save Image",
+    "history": "History",
+    "clearHistory": "Clear History",
+    "noHistory": "No history yet",
+    "usedToday": "Used today",
+    "times": "times",
+    "dailyLimit": "Daily free limit",
+    "upgrade": "Upgrade for unlimited"
   },
   "nav": {
     "home": "Home"
+  },
+  "tone": {
+    "normal": "Normal",
+    "humorous": "Humorous",
+    "emotional": "Emotional",
+    "concise": "Concise",
+    "formal": "Formal"
+  },
+  "length": {
+    "short": "Short (1 line)",
+    "medium": "Medium (3-5 lines)",
+    "long": "Long (paragraph)"
   },
   "platforms": {
     "wechat": "WeChat Moments",

@@ -9,13 +9,35 @@
     "copied": "已复制",
     "regenerate": "重新生成",
     "placeholder": "输入你的想法、关键词或一段话...",
-    "selectPlatform": "选择发布平台",
+    "selectPlatform": "发布平台",
+    "selectTone": "语气风格",
+    "selectLength": "文案长度",
     "generate": "生成文案",
     "result": "生成结果",
-    "startWriting": "开始创作"
+    "startWriting": "开始创作",
+    "saveImage": "保存图片",
+    "history": "历史记录",
+    "clearHistory": "清空记录",
+    "noHistory": "暂无历史记录",
+    "usedToday": "今日已用",
+    "times": "次",
+    "dailyLimit": "每日免费次数",
+    "upgrade": "升级以解锁更多"
   },
   "nav": {
     "home": "首页"
+  },
+  "tone": {
+    "normal": "普通",
+    "humorous": "幽默",
+    "emotional": "煽情",
+    "concise": "简洁",
+    "formal": "正式"
+  },
+  "length": {
+    "short": "短（一句话）",
+    "medium": "中等（3-5句）",
+    "long": "长文（段落）"
   },
   "platforms": {
     "wechat": "朋友圈",
