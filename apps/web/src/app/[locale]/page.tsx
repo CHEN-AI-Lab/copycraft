@@ -131,7 +131,25 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
       </div>
 
       {/* Daily limit bar */}
-      <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 rounded-lg px-4 py-2 text-sm">
+      {paid ? (
+        <div className="flex items-center justify-between bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-lg px-4 py-3 text-sm border border-amber-200 dark:border-amber-700/30">
+          <span className="flex items-center gap-2">
+            <span className="inline-flex items-center justify-center bg-amber-400 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+              👑 PRO
+            </span>
+            <span className="text-amber-700 dark:text-amber-300 font-medium">
+              {t('common.unlimited')}
+            </span>
+          </span>
+          <button
+            onClick={() => setShowHistory(!showHistory)}
+            className="text-amber-600 dark:text-amber-400 underline hover:no-underline"
+          >
+            {showHistory ? '✕ ' + t('common.result') : t('common.history') + ` (${history.length})`}
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 rounded-lg px-4 py-2 text-sm">
         <span className="text-blue-700 dark:text-blue-300">
           {paid
             ? 'Pro ' + t('common.unlimited')
@@ -143,8 +161,7 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
         >
           {showHistory ? '✕ ' + t('common.result') : t('common.history') + ` (${history.length})`}
         </button>
-      </div>
-
+      </div>)}
       {showHistory ? (
         /* History panel */
         <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border p-4 space-y-3 max-h-96 overflow-y-auto">
