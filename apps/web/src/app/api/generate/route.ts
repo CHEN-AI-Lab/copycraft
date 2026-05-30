@@ -9,64 +9,12 @@ const platformNames: Record<string, string> = {
   douyin: 'Douyin (抖音)',
 }
 
-const toneInstructions: Record<string, string> = {
-  normal: '语气自然流畅',
-  humorous: '语气幽默风趣，可以用网络梗和轻松的表达',
-  emotional: '语气煽情感人，能打动人心',
-  concise: '简洁有力，一句话说清楚核心',
-  formal: '语气正式专业，适合商务场合',
-}
-
-function extractCopy(raw: string): string {
-  let text = raw.replace(/^Thinking Process:?\s*/im, '').trim()
-  const lines = text.split('\n')
-
-  // Strategy: collect text chunks between numbered thinking steps
-  let chunks: string[] = []
-  let current: string[] = []
-  let isThinkingStep = false
-
-  for (const line of lines) {
-    const trimmed = line.trim()
-    // Detect numbered thinking steps: "1.  **Something**"
-    if (/^\d+\.\s+\*\*[A-Z]/.test(trimmed)) {
-      if (current.length > 0) {
-        chunks.push(current.join('\n'))
-        current = []
-      }
-      isThinkingStep = true
-      continue
-    }
-    // Skip the thinking step content lines that start with *   *
-    if (isThinkingStep && /^\s*\*\s/.test(trimmed) && !/[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]/.test(trimmed)) {
-      continue
-    }
-    if (trimmed) {
-      isThinkingStep = false
-      current.push(line)
-    }
-  }
-  if (current.length > 0) chunks.push(current.join('\n'))
-
-  // Find the chunk with the most total Chinese characters (the actual copy)
-  let bestChunk = ''
-  let maxChineseCount = 0
-
-  for (const chunk of chunks) {
-    const chineseChars = (chunk.match(/[\u4e00-\u9fff]/g) || []).length
-    if (chineseChars > maxChineseCount) {
-      maxChineseCount = chineseChars
-      bestChunk = chunk
-    }
-  }
-
-  // Clean up remaining artifacts
-  bestChunk = bestChunk
-    .replace(/^\s*\*{1,2}\s*(Draft|Title|Idea|Option)\s*\d*\s*:?\s*/gim, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-
-  return bestChunk || text
+const toneLabels: Record<string, string> = {
+  normal: '',
+  humorous: '语气幽默风趣，可以用网络梗和轻松的表达。',
+  emotional: '语气煽情感人，能打动人心。',
+  concise: '简洁有力，一句话说清楚核心。',
+  formal: '语气正式专业，适合商务场合。',
 }
 
 export async function POST(req: NextRequest) {
@@ -85,15 +33,15 @@ export async function POST(req: NextRequest) {
     const baseUrl = process.env.OPENAI_BASE_URL || 'https://api.deepseek.com/v1'
     const model = process.env.OPENAI_MODEL || 'deepseek-chat'
     const platformStr = platformNames[platform as string] || '社交媒体'
-    const toneStr = toneInstructions[tone as string] || toneInstructions.normal
+    const toneStr = toneLabels[tone as string] || ''
 
     const systemPrompt = locale === 'zh-CN'
-      ? `你是一个文案写手。${toneStr}。平台：${platformStr}\n直接输出文案。`
-      : `You are a copywriter. Tone: ${toneStr.replace('语气', '').trim() || 'natural'}.\nPlatform: ${platformStr}\nOutput copy only.`
+      ? `你是一个专业的文案写手。${toneStr}直接输出文案，不要输出任何思考过程、分析或注释。只输出文案本身。\n当前平台：${platformStr}`
+      : `You are a professional copywriter. ${toneStr.replace(/[。，、]/g, '. ')}Output ONLY the copy text. No thinking process, analysis, or notes.\nPlatform: ${platformStr}`
 
     const userPrompt = locale === 'zh-CN'
-      ? `关键词/想法：${prompt}`
-      : `Keywords/ideas: ${prompt}`
+      ? `请为"${platformStr}"平台创作一段文案。关键词/想法：${prompt}`
+      : `Write copy for ${platformStr} platform. Keywords/ideas: ${prompt}`
 
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
@@ -107,7 +55,7 @@ export async function POST(req: NextRequest) {
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        max_tokens: maxTokens || 500,
+        max_tokens: maxTokens || 1000,
         temperature: 0.8,
       }),
     })
@@ -120,9 +68,7 @@ export async function POST(req: NextRequest) {
 
     const data = await response.json()
     const message = data.choices?.[0]?.message
-    const rawText = message?.content || message?.reasoning || ''
-
-    const text = extractCopy(rawText)
+    const text = message?.content || message?.reasoning || ''
 
     return NextResponse.json({ text })
   } catch (e) {
