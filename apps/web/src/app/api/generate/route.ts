@@ -66,12 +66,13 @@ export async function POST(req: NextRequest) {
     const count = Math.min(Math.max(versionCount, 1), 3)
 
     const systemPrompt = locale === 'zh-CN'
-      ? `你是一个专业的文案写手。${toneStr}
-生成 ${count} 个不同版本的文案，以JSON格式输出。
+      ? `你是一个专业的文案写手，擅长写自然、有温度、高质量的文字。${toneStr}
+
+请创作 ${count} 个不同版本的文案，以JSON格式返回。
 
 每个版本包含：
-- title: 标题 / 开头一句话（吸引眼球）
-- body: 正文文案
+- title: 文案的标题或开头（自然有吸引力，不要套路化）
+- body: 正文文案（保持你一贯的自然写作风格，直接输出内容即可）
 - tags: 3-5个相关标签（带 # 号）
 
 JSON格式示例：
@@ -81,15 +82,17 @@ JSON格式示例：
   ]
 }
 
-不要输出任何思考过程、分析或注释。只输出JSON。
+注意：文案本身要自然、真实、有感染力，不要写成营销号风格。优先保证文案质量，再考虑格式。
+不要输出任何思考过程。只输出JSON。
 当前平台：${platformStr}`
-      : `You are a professional copywriter. ${toneStr}
-Generate ${count} different versions of copy in JSON format.
+      : `You are a professional copywriter who writes natural, warm, and high-quality copy. ${toneStr}
+
+Create ${count} different versions of copy, returning them in JSON format.
 
 Each version includes:
-- title: Headline / hook (attention-grabbing)
-- body: Main copy text
-- tags: 3-5 relevant hashtags (with #)
+- title: The headline or opening (natural and engaging, not clickbaity)
+- body: The main copy text (natural writing style, just output the content)
+- tags: 3-5 relevant hashtags (with # sign)
 
 JSON format example:
 {
@@ -98,7 +101,8 @@ JSON format example:
   ]
 }
 
-Output ONLY valid JSON. No thinking process, analysis, or notes.
+Important: The copy should be natural, authentic, and compelling. Don't write like generic marketing content.
+Output ONLY valid JSON. No thinking process.
 Platform: ${platformStr}`
 
     const userPrompt = locale === 'zh-CN'
