@@ -76,6 +76,8 @@ export async function POST(req: NextRequest) {
     let copyStartIdx = -1
     for (let i = 0; i < lines.length; i++) {
       const trimmed = lines[i].trim()
+      // Skip thinking process lines (start with * or digit)
+      if (/^[*\d]/.test(trimmed)) continue
       if (/^[🍋🍃🧊🥤🍹🌿✨🧡🌟💡🎉📸🏔️🥾💖💕🫠🌞❄️💧🍯💡]/.test(trimmed) && /[\u4e00-\u9fff]/.test(trimmed)) {
         copyStartIdx = i
         break
@@ -86,7 +88,9 @@ export async function POST(req: NextRequest) {
     let hashStartIdx = -1
     if (copyStartIdx === -1) {
       for (let i = 0; i < lines.length; i++) {
-        if (/^#/.test(lines[i].trim()) && /[\u4e00-\u9fff]/.test(lines[i])) {
+        const trimmed = lines[i].trim()
+        if (/^[*\d]/.test(trimmed)) continue
+        if (/^#/.test(trimmed) && /[\u4e00-\u9fff]/.test(trimmed)) {
           hashStartIdx = i
           break
         }
