@@ -9,12 +9,12 @@ const platformNames: Record<string, string> = {
   douyin: 'Douyin (抖音)',
 }
 
-const toneLabels: Record<string, string> = {
-  normal: '',
-  humorous: '语气幽默风趣，可以用网络梗和轻松的表达。',
-  emotional: '语气煽情感人，能打动人心。',
-  concise: '简洁有力，一句话说清楚核心。',
-  formal: '语气正式专业，适合商务场合。',
+const toneLabels: Record<string, [string, string]> = {
+  normal: ['', ''],
+  humorous: ['语气幽默风趣，可以用网络梗和轻松的表达。', 'Use a funny, playful tone with internet slang and casual expressions.'],
+  emotional: ['语气煽情感人，能打动人心。', 'Use an emotional, touching tone that resonates deeply.'],
+  concise: ['简洁有力，一句话说清楚核心。', 'Keep it concise and powerful. Get the point across in one sentence.'],
+  formal: ['语气正式专业，适合商务场合。', 'Use a formal, professional tone suitable for business contexts.'],
 }
 
 export async function POST(req: NextRequest) {
@@ -33,11 +33,12 @@ export async function POST(req: NextRequest) {
     const baseUrl = process.env.OPENAI_BASE_URL || 'https://api.deepseek.com/v1'
     const model = process.env.OPENAI_MODEL || 'deepseek-chat'
     const platformStr = platformNames[platform as string] || '社交媒体'
-    const toneStr = toneLabels[tone as string] || ''
+    const tonePair = toneLabels[tone as string] || ['', '']
+    const toneStr = locale === 'zh-CN' ? tonePair[0] : tonePair[1]
 
     const systemPrompt = locale === 'zh-CN'
       ? `你是一个专业的文案写手。${toneStr}直接输出文案，不要输出任何思考过程、分析或注释。只输出文案本身。\n当前平台：${platformStr}`
-      : `You are a professional copywriter. ${toneStr.replace(/[。，、]/g, '. ')}Output ONLY the copy text. No thinking process, analysis, or notes.\nPlatform: ${platformStr}`
+      : `You are a professional copywriter. ${toneStr}Output ONLY the copy text. No thinking process, analysis, or notes.\nPlatform: ${platformStr}`
 
     const userPrompt = locale === 'zh-CN'
       ? `请为"${platformStr}"平台创作一段文案。关键词/想法：${prompt}`

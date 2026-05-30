@@ -50,21 +50,17 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
     setOutput('')
 
     try {
-      const toneLabel = t(`tone.${tone}`)
-      const platformLabel = t(`platforms.${platform}`)
-
-      // Build prompt with tone + length
-      const extendedPrompt = `${input}\n\n语气：${toneLabel}（${tone}）\n长度：${length}`
+      const tokens = getLengthTokens(length)
 
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: extendedPrompt,
+          prompt: input,
           platform,
           locale,
           tone: tone as string,
-          maxTokens: getLengthTokens(length),
+          maxTokens: tokens,
         }),
       })
       const data = await res.json()
@@ -123,7 +119,7 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
       {/* Daily limit bar */}
       <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 rounded-lg px-4 py-2 text-sm">
         <span className="text-blue-700 dark:text-blue-300">
-          {t('common.dailyLimit')}：{remaining}/{5} {t('common.times')}
+          {t('common.dailyLimit')}: {remaining}/{5} {t('common.times')}
         </span>
         <button
           onClick={() => setShowHistory(!showHistory)}

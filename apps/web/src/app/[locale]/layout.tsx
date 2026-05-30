@@ -26,7 +26,9 @@ export default async function LocaleLayout({ children, params }: Props) {
         <NextIntlClientProvider locale={locale} messages={messages}>
           <div className="max-w-4xl mx-auto px-4 py-6">
             <div className="flex justify-between items-center mb-8">
-              <h1 className="text-xl font-bold text-slate-800 dark:text-white">CopyCraft</h1>
+              <h1 className="text-xl font-bold text-slate-800 dark:text-white">
+                {locale === 'zh-CN' ? '文案宝' : 'CopyCraft'}
+              </h1>
               <LanguageSwitcher locale={locale} />
             </div>
             <main>{children}</main>
