@@ -21,8 +21,9 @@
     "noHistory": "No history yet",
     "usedToday": "Used today",
     "times": "times",
-    "dailyLimit": "Daily free limit",
-    "upgrade": "Upgrade for unlimited"
+    "dailyLimit": "Daily Free Limit",
+        "unlimited": "Unlimited",
+        "upgrade": "Upgrade to Unlock"
   },
   "nav": {
     "home": "Home"

@@ -133,7 +133,9 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
       {/* Daily limit bar */}
       <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 rounded-lg px-4 py-2 text-sm">
         <span className="text-blue-700 dark:text-blue-300">
-          {t('common.dailyLimit')}: {remaining}/{5} {t('common.times')}
+          {paid
+            ? 'Pro ' + t('common.unlimited')
+            : `${t('common.dailyLimit')}: ${remaining}/${5} ${t('common.times')}`}
         </span>
         <button
           onClick={() => setShowHistory(!showHistory)}
