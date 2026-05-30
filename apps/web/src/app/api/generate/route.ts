@@ -70,17 +70,33 @@ export async function POST(req: NextRequest) {
     const message = data.choices?.[0]?.message
     const rawText = message?.content || message?.reasoning || ''
 
-    // Extract copy after *Draft: marker (SenseTime model wraps output in thinking process)
-    const draftIdx = rawText.indexOf('*Draft:')
-    const reviewIdx = rawText.search(/\n\d+\.\s+\*\*Final Review/)
-    const start = draftIdx !== -1 ? draftIdx + '*Draft:'.length : 0
-    const end = reviewIdx !== -1 ? reviewIdx : rawText.length
-    let text = rawText.slice(start, end).trim()
+    // Extract copy: most SenseTime output puts thinking first, then actual copy
+    // Strategy: find first line starting with emoji + Chinese (the social media title)
+    const lines = rawText.split('\n')
+    let copyStartIdx = -1
+    for (let i = 0; i < lines.length; i++) {
+      const trimmed = lines[i].trim()
+      if (/^[🍋🍃🧊🥤🍹🌿✨🧡🌟💡🎉📸🏔️🥾💖💕🫠🌞❄️💧🍯💡]/.test(trimmed) && /[\u4e00-\u9fff]/.test(trimmed)) {
+        copyStartIdx = i
+        break
+      }
+    }
 
-    // Clean up markdown artifacts
-    text = text.replace(/^\s*\*{0,2}\s*Title:\s*/gm, '')
-    text = text.replace(/^\s*\*{0,2}\s*Content:\s*/gm, '')
-    text = text.trim()
+    // Also look for "#" hashtag lines as fallback
+    let hashStartIdx = -1
+    if (copyStartIdx === -1) {
+      for (let i = 0; i < lines.length; i++) {
+        if (/^#/.test(lines[i].trim()) && /[\u4e00-\u9fff]/.test(lines[i])) {
+          hashStartIdx = i
+          break
+        }
+      }
+    }
+
+    const startLine = copyStartIdx !== -1 ? copyStartIdx : hashStartIdx
+    const text = startLine !== -1
+      ? lines.slice(startLine).join('\n').trim()
+      : rawText.replace(/^Thinking Process:?\s*/im, '').trim()
 
     return NextResponse.json({ text })
   } catch (e) {
