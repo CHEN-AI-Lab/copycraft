@@ -33,12 +33,15 @@ export async function POST(req: NextRequest) {
     const baseUrl = process.env.OPENAI_BASE_URL || 'https://api.deepseek.com/v1'
     const model = process.env.OPENAI_MODEL || 'deepseek-chat'
     const platformStr = platformNames[platform as string] || '社交媒体'
-
     const toneStr = toneInstructions[tone as string] || toneInstructions.normal
 
+    // Use a delimiter marker to extract just the copy text from the response
+    const DELIMITER_START = '<<<COPY_START>>>'
+    const DELIMITER_END = '<<<COPY_END>>>'
+
     const systemPrompt = locale === 'zh-CN'
-      ? `你是一个专业的文案写手。${toneStr}。直接输出文案，不要输出任何思考过程、分析或注释。只输出文案本身。平台：${platformStr}`
-      : `You are a professional copywriter. Tone: ${toneStr.replace('语气', '').trim() || 'natural and fluent'}. Output ONLY the copy text. No thinking process, notes, or analysis. Platform: ${platformStr}`
+      ? `你是一个专业的文案写手。\n约束：\n1. ${toneStr}\n2. 在文案开头加上 ${DELIMITER_START}，结尾加上 ${DELIMITER_END}\n3. 两个标记之间只放文案正文，不放任何思考过程\n4. 平台：${platformStr}`
+      : `You are a professional copywriter.\nRules:\n1. Tone: ${toneStr.replace('语气', '').trim() || 'natural and fluent'}\n2. Start copy with ${DELIMITER_START} and end with ${DELIMITER_END}\n3. No thinking process between the markers\n4. Platform: ${platformStr}`
 
     const userPrompt = locale === 'zh-CN'
       ? `请为"${platformStr}"平台创作一段文案。关键词/想法：${prompt}`
@@ -69,28 +72,33 @@ export async function POST(req: NextRequest) {
 
     const data = await response.json()
     const message = data.choices?.[0]?.message
+    const rawText = message?.content || message?.reasoning || ''
 
-    // Prefer content field; fallback to reasoning
-    let text = message?.content || message?.reasoning || ''
+    // Extract text between delimiters
+    const startIdx = rawText.indexOf(DELIMITER_START)
+    const endIdx = rawText.indexOf(DELIMITER_END)
 
-    // Strip thinking process (SenseTime model always outputs it)
-    if (text && !message?.content) {
-      // Remove lines that look like thinking process (numbered steps, analysis headers)
-      const lines = text.split('\n')
-      const filtered = lines.filter((line: string) => {
-        const trimmed = line.trim()
-        // Skip thinking process indicators
-        if (/^\d+\.\s+\*\*/.test(trimmed)) return false  // "1.  **Analyze**"
-        if (/^\d+\.\s/.test(trimmed) && /(Analyze|Draft|Refine|Review|Constraint|Determine|Check|Idea|Final)/.test(trimmed)) return false
-        if (/^\*Draft\*:?/.test(trimmed)) return false
-        if (trimmed.startsWith('**Draft**')) return false
-        if (/Thinking Process/i.test(trimmed)) return false
-        return true
-      })
-      if (filtered.length > 3) {
-        text = filtered.join('\n').trim()
-      }
+    let text = ''
+    if (startIdx !== -1 && endIdx !== -1) {
+      text = rawText.slice(startIdx + DELIMITER_START.length, endIdx).trim()
+    } else if (startIdx !== -1) {
+      text = rawText.slice(startIdx + DELIMITER_START.length).trim()
+    } else if (endIdx !== -1) {
+      text = rawText.slice(0, endIdx).trim()
+    } else if (message?.content) {
+      // If content field is populated directly, use it
+      text = message.content
+    } else {
+      // Fallback: use first half of reasoning (before the actual thinking kicks in, it outputs copy)
+      // This rarely works well but is better than nothing
+      text = rawText
     }
+
+    // Clean up any remaining thinking artifacts
+    text = text
+      .replace(/^#{1,6}\s+.*$/gm, '')  // Remove markdown headers
+      .replace(/^\*{1,2}.*\*{1,2}$/gm, '')  // Remove bold/italic lines
+      .trim()
 
     return NextResponse.json({ text })
   } catch (e) {
