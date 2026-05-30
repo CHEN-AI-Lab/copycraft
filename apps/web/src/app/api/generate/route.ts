@@ -18,37 +18,53 @@ const toneInstructions: Record<string, string> = {
 }
 
 function extractCopy(raw: string): string {
-  // Strip leading "Thinking Process:" and similar headers
-  let text = raw.replace(/^Thinking Process:?\s*/i, '').trim()
+  // Strip leading "Thinking Process:" header
+  let text = raw.replace(/^Thinking Process:?\s*/im, '').trim()
 
-  // Try to find the actual copy: look for the last block that starts with emoji
-  // or hashtags (social media post style)
   const lines = text.split('\n')
 
-  // Strategy: find lines that look like actual copy text
-  // (contains Chinese, has emojis, or starts with #)
-  let copyStart = -1
-  for (let i = lines.length - 1; i >= 0; i--) {
-    const line = lines[i].trim()
-    if (!line) continue
-
-    // Detect copy-style content: starts with emoji, hashtag, or Chinese
-    const hasCopyMarker =
-      /^#[^\s]/.test(line) ||
-      /^[\u4e00-\u9fff]/.test(line) ||
-      /^[🧊🌟🍹🥥🍉💡🎉📸🏔️🌿🥾]/u.test(line) ||
-      /[#\u4e00-\u9fff]/.test(line)
-
-    if (hasCopyMarker) {
-      copyStart = i
-      break
+  // Strategy 1: Find lines after "*Draft:" marker (most reliable)
+  for (const marker of ['*   *Draft:', '*Draft:', '**Draft**:', '*Draft*:']) {
+    const idx = lines.findIndex((l) => l.trim().startsWith(marker))
+    if (idx !== -1) {
+      // Take everything from the draft line onwards, but strip the marker prefix
+      text = lines.slice(idx).join('\n').trim()
+      text = text.replace(/^\s*\*{0,2}Draft\*{0,2}:?\s*/i, '')
+      return text
     }
   }
 
-  if (copyStart > 0) {
-    text = lines.slice(copyStart).join('\n').trim()
+  // Strategy 2: Find text between numbered thinking steps - this contains the actual copy
+  // Look for the longest block of Chinese text
+  let bestBlock = ''
+  let currentBlock = ''
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+    // Skip thinking process headers (numbered items, bold headers)
+    if (/^\d+\.\s+\*\*/.test(trimmed)) {
+      // Save current block and start a new one
+      if (currentBlock.length > bestBlock.length) {
+        bestBlock = currentBlock
+      }
+      currentBlock = ''
+      continue
+    }
+    // Skip empty/meta lines
+    if (!trimmed || trimmed.startsWith('---') || trimmed.startsWith('```')) continue
+
+    currentBlock += line + '\n'
   }
 
+  if (currentBlock.length > bestBlock.length) {
+    bestBlock = currentBlock
+  }
+
+  if (bestBlock.trim().length > 10) {
+    return bestBlock.replace(/\n{3,}/g, '\n\n').trim()
+  }
+
+  // Strategy 3: fallback - return raw text with header stripped
   return text
 }
 
@@ -92,7 +108,6 @@ export async function POST(req: NextRequest) {
         ],
         max_tokens: maxTokens || 500,
         temperature: 0.8,
-        reasoning_effort: "none",
       }),
     })
 
