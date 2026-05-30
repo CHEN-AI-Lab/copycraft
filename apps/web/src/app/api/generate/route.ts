@@ -95,6 +95,10 @@ function cleanSenseTimeOutput(raw: string): string {
       if (/^\d+\.\s+\*\*(Analyze|Understand|Determine|Refine|Tone|Platform|Structure|Idea|Check)/.test(t)) return false
       if (/^(Persona|Role|Task|Constraint|Output|Topic|Keywords)/i.test(t) && t.length < 60) return false
       if (/^\*{1,2}\s*(Title|Intro|Body|Outro|Tags|Opening|Closing|Recipe|Drink)/i.test(t)) return false
+      // Catch lines like "*   **Role:** ..." in senseTime output
+      if (/^\*\s+\*\*[A-Z][a-z]+:\*\*/.test(t)) return false
+      if (/^\*\*Draft/i.test(t)) return false
+      if (/^Thinking Process/i.test(t)) return false
       return true
     })
     .join('\n')
