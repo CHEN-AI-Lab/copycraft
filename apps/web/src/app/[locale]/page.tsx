@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, use, useRef, useMemo } from 'react'
+import { useState, use, useRef, useMemo, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { useCopyHistory } from '@/hooks/useCopyHistory'
 import { useDailyLimit } from '@/hooks/useDailyLimit'
@@ -65,6 +65,15 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
   const { remaining, canGenerate, increment, paid } = useDailyLimit(5)
 
   const isZh = locale === 'zh-CN'
+
+  // Initialize dark mode from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('theme')
+    if (saved === 'dark') {
+      document.documentElement.classList.add('dark')
+      setIsDark(true)
+    }
+  }, [])
 
   // Filtered history
   const filteredHistory = useMemo(() => {
@@ -190,7 +199,16 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
     <div className="space-y-4">
       {/* Header */}
       <div className="text-center mb-6">
-        <h2 className="text-3xl font-bold text-slate-800 dark:text-white mb-2">{t('home.title')}</h2>
+        <div className="flex justify-center items-center gap-3 mb-2">
+          <h2 className="text-3xl font-bold text-slate-800 dark:text-white">{t('home.title')}</h2>
+          <button
+            onClick={() => { setIsDark(!isDark); toggleDarkMode() }}
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+            title={isZh ? (isDark ? '亮色模式' : '暗色模式') : (isDark ? 'Light mode' : 'Dark mode')}
+          >
+            {isDark ? '☀️' : '🌙'}
+          </button>
+        </div>
         <p className="text-slate-500 dark:text-slate-400">{t('home.subtitle')}</p>
       </div>
 
