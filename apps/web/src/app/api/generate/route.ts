@@ -18,54 +18,55 @@ const toneInstructions: Record<string, string> = {
 }
 
 function extractCopy(raw: string): string {
-  // Strip leading "Thinking Process:" header
   let text = raw.replace(/^Thinking Process:?\s*/im, '').trim()
-
   const lines = text.split('\n')
 
-  // Strategy 1: Find lines after "*Draft:" marker (most reliable)
-  for (const marker of ['*   *Draft:', '*Draft:', '**Draft**:', '*Draft*:']) {
-    const idx = lines.findIndex((l) => l.trim().startsWith(marker))
-    if (idx !== -1) {
-      // Take everything from the draft line onwards, but strip the marker prefix
-      text = lines.slice(idx).join('\n').trim()
-      text = text.replace(/^\s*\*{0,2}Draft\*{0,2}:?\s*/i, '')
-      return text
-    }
-  }
-
-  // Strategy 2: Find text between numbered thinking steps - this contains the actual copy
-  // Look for the longest block of Chinese text
-  let bestBlock = ''
-  let currentBlock = ''
+  // Strategy: collect text chunks between numbered thinking steps
+  let chunks: string[] = []
+  let current: string[] = []
+  let isThinkingStep = false
 
   for (const line of lines) {
     const trimmed = line.trim()
-    // Skip thinking process headers (numbered items, bold headers)
-    if (/^\d+\.\s+\*\*/.test(trimmed)) {
-      // Save current block and start a new one
-      if (currentBlock.length > bestBlock.length) {
-        bestBlock = currentBlock
+    // Detect numbered thinking steps: "1.  **Something**"
+    if (/^\d+\.\s+\*\*[A-Z]/.test(trimmed)) {
+      if (current.length > 0) {
+        chunks.push(current.join('\n'))
+        current = []
       }
-      currentBlock = ''
+      isThinkingStep = true
       continue
     }
-    // Skip empty/meta lines
-    if (!trimmed || trimmed.startsWith('---') || trimmed.startsWith('```')) continue
+    // Skip the thinking step content lines that start with *   *
+    if (isThinkingStep && /^\s*\*\s/.test(trimmed) && !/[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]/.test(trimmed)) {
+      continue
+    }
+    if (trimmed) {
+      isThinkingStep = false
+      current.push(line)
+    }
+  }
+  if (current.length > 0) chunks.push(current.join('\n'))
 
-    currentBlock += line + '\n'
+  // Find the chunk with the most total Chinese characters (the actual copy)
+  let bestChunk = ''
+  let maxChineseCount = 0
+
+  for (const chunk of chunks) {
+    const chineseChars = (chunk.match(/[\u4e00-\u9fff]/g) || []).length
+    if (chineseChars > maxChineseCount) {
+      maxChineseCount = chineseChars
+      bestChunk = chunk
+    }
   }
 
-  if (currentBlock.length > bestBlock.length) {
-    bestBlock = currentBlock
-  }
+  // Clean up remaining artifacts
+  bestChunk = bestChunk
+    .replace(/^\s*\*{1,2}\s*(Draft|Title|Idea|Option)\s*\d*\s*:?\s*/gim, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
 
-  if (bestBlock.trim().length > 10) {
-    return bestBlock.replace(/\n{3,}/g, '\n\n').trim()
-  }
-
-  // Strategy 3: fallback - return raw text with header stripped
-  return text
+  return bestChunk || text
 }
 
 export async function POST(req: NextRequest) {
