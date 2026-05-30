@@ -2,6 +2,7 @@ import { NextIntlClientProvider, hasLocale } from 'next-intl'
 import { notFound } from 'next/navigation'
 import { locales } from '../../../next-intl.config'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
+import ThemeToggle from '@/components/ThemeToggle'
 import '../globals.css'
 
 type Props = {
@@ -30,6 +31,7 @@ export default async function LocaleLayout({ children, params }: Props) {
                 {locale === 'zh-CN' ? '文案宝' : 'CopyCraft'}
               </h1>
               <LanguageSwitcher locale={locale} />
+              <ThemeToggle />
             </div>
             <main>{children}</main>
           </div>

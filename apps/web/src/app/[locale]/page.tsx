@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, use, useRef, useMemo, useEffect } from 'react'
+import { useState, use, useRef, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { useCopyHistory } from '@/hooks/useCopyHistory'
 import { useDailyLimit } from '@/hooks/useDailyLimit'
@@ -32,12 +32,6 @@ const TEMPLATES = [
   { label: '个人简介', enLabel: 'Bio/About', prompt: '自我介绍或个人品牌文案' },
 ]
 
-function toggleDarkMode() {
-  const html = document.documentElement
-  const isDark = html.classList.toggle('dark')
-  localStorage.setItem('theme', isDark ? 'dark' : 'light')
-}
-
 export default function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = use(params)
   const t = useTranslations()
@@ -58,22 +52,12 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
   const [editText, setEditText] = useState('')
   const [historySearch, setHistorySearch] = useState('')
   const [historyPlatformFilter, setHistoryPlatformFilter] = useState<string>('all')
-  const [isDark, setIsDark] = useState(false)
   const [showTemplates, setShowTemplates] = useState(false)
 
   const { items: history, addItem, clearAll } = useCopyHistory()
   const { remaining, canGenerate, increment, paid } = useDailyLimit(5)
 
   const isZh = locale === 'zh-CN'
-
-  // Initialize dark mode from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem('theme')
-    if (saved === 'dark') {
-      document.documentElement.classList.add('dark')
-      setIsDark(true)
-    }
-  }, [])
 
   // Filtered history
   const filteredHistory = useMemo(() => {
@@ -199,16 +183,7 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
     <div className="space-y-4">
       {/* Header */}
       <div className="text-center mb-6">
-        <div className="flex justify-center items-center gap-3 mb-2">
-          <h2 className="text-3xl font-bold text-slate-800 dark:text-white">{t('home.title')}</h2>
-          <button
-            onClick={() => { setIsDark(!isDark); toggleDarkMode() }}
-            className="w-9 h-9 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-            title={isZh ? (isDark ? '亮色模式' : '暗色模式') : (isDark ? 'Light mode' : 'Dark mode')}
-          >
-            {isDark ? '☀️' : '🌙'}
-          </button>
-        </div>
+        <h2 className="text-3xl font-bold text-slate-800 dark:text-white mb-2">{t('home.title')}</h2>
         <p className="text-slate-500 dark:text-slate-400">{t('home.subtitle')}</p>
       </div>
 
@@ -223,28 +198,18 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
               {t('common.unlimited')}
             </span>
           </span>
-          <div className="flex items-center gap-2">
-            <button onClick={() => { setIsDark(!isDark); toggleDarkMode() }} className="text-amber-500 hover:text-amber-600 text-lg" title="Toggle dark mode">
-              {isDark ? '☀️' : '🌙'}
-            </button>
-            <button onClick={() => setShowHistory(!showHistory)} className="text-amber-600 dark:text-amber-400 underline hover:no-underline">
+          <button onClick={() => setShowHistory(!showHistory)} className="text-amber-600 dark:text-amber-400 underline hover:no-underline">
               {showHistory ? '✕ ' + t('common.result') : t('common.history') + ` (${history.length})`}
-            </button>
-          </div>
+          </button>
         </div>
       ) : (
         <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 rounded-lg px-4 py-2 text-sm">
           <span className="text-blue-700 dark:text-blue-300">
             {t('common.dailyLimit')}: {remaining}/{5} {t('common.times')}
           </span>
-          <div className="flex items-center gap-2">
-            <button onClick={() => { setIsDark(!isDark); toggleDarkMode() }} className="text-blue-500 hover:text-blue-600 text-lg" title="Toggle dark mode">
-              {isDark ? '☀️' : '🌙'}
-            </button>
-            <button onClick={() => setShowHistory(!showHistory)} className="text-blue-600 dark:text-blue-400 underline hover:no-underline">
+          <button onClick={() => setShowHistory(!showHistory)} className="text-blue-600 dark:text-blue-400 underline hover:no-underline">
               {showHistory ? '✕ ' + t('common.result') : t('common.history') + ` (${history.length})`}
-            </button>
-          </div>
+          </button>
         </div>
       )}
 
