@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
         ],
         max_tokens: maxTokens || 1000,
         temperature: 0.8,
+        reasoning_effort: "none",
       }),
     })
 
@@ -69,10 +70,8 @@ export async function POST(req: NextRequest) {
 
     const data = await response.json()
     const message = data.choices?.[0]?.message
+    // When reasoning_effort is "none", content field has the direct output
     let text = message?.content || message?.reasoning || ''
-
-    // Strip the "Thinking Process:" header only, keep everything else
-    text = text.replace(/^Thinking Process:?\s*/im, '').trim()
 
     return NextResponse.json({ text })
   } catch (e) {
