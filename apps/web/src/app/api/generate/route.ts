@@ -69,7 +69,28 @@ export async function POST(req: NextRequest) {
 
     const data = await response.json()
     const message = data.choices?.[0]?.message
-    const text = message?.content || message?.reasoning || ''
+
+    // Prefer content field; fallback to reasoning
+    let text = message?.content || message?.reasoning || ''
+
+    // Strip thinking process (SenseTime model always outputs it)
+    if (text && !message?.content) {
+      // Remove lines that look like thinking process (numbered steps, analysis headers)
+      const lines = text.split('\n')
+      const filtered = lines.filter((line: string) => {
+        const trimmed = line.trim()
+        // Skip thinking process indicators
+        if (/^\d+\.\s+\*\*/.test(trimmed)) return false  // "1.  **Analyze**"
+        if (/^\d+\.\s/.test(trimmed) && /(Analyze|Draft|Refine|Review|Constraint|Determine|Check|Idea|Final)/.test(trimmed)) return false
+        if (/^\*Draft\*:?/.test(trimmed)) return false
+        if (trimmed.startsWith('**Draft**')) return false
+        if (/Thinking Process/i.test(trimmed)) return false
+        return true
+      })
+      if (filtered.length > 3) {
+        text = filtered.join('\n').trim()
+      }
+    }
 
     return NextResponse.json({ text })
   } catch (e) {
