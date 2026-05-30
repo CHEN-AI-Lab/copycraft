@@ -68,7 +68,19 @@ export async function POST(req: NextRequest) {
 
     const data = await response.json()
     const message = data.choices?.[0]?.message
-    const text = message?.content || message?.reasoning || ''
+    const rawText = message?.content || message?.reasoning || ''
+
+    // Extract copy after *Draft: marker (SenseTime model wraps output in thinking process)
+    const draftIdx = rawText.indexOf('*Draft:')
+    const reviewIdx = rawText.search(/\n\d+\.\s+\*\*Final Review/)
+    const start = draftIdx !== -1 ? draftIdx + '*Draft:'.length : 0
+    const end = reviewIdx !== -1 ? reviewIdx : rawText.length
+    let text = rawText.slice(start, end).trim()
+
+    // Clean up markdown artifacts
+    text = text.replace(/^\s*\*{0,2}\s*Title:\s*/gm, '')
+    text = text.replace(/^\s*\*{0,2}\s*Content:\s*/gm, '')
+    text = text.trim()
 
     return NextResponse.json({ text })
   } catch (e) {
