@@ -54,5 +54,10 @@
   },
   "footer": {
     "copyright": "© 2026 CopyCraft"
+  },
+  "success": {
+    "title": "Payment Successful!",
+    "description": "Thank you for your support. You now have unlimited access to CopyCraft.",
+    "back": "Start Creating"
   }
 }

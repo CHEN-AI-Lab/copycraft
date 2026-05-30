@@ -40,7 +40,7 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
   const [exporting, setExporting] = useState(false)
 
   const { items: history, addItem, clearAll } = useCopyHistory()
-  const { remaining, canGenerate, increment } = useDailyLimit(5)
+  const { remaining, canGenerate, increment, paid } = useDailyLimit(5)
 
   async function handleGenerate() {
     if (!input.trim() || !canGenerate) return
@@ -105,6 +105,20 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
       console.error('Export image failed:', e)
     } finally {
       setExporting(false)
+    }
+  }
+
+  async function handleUpgrade() {
+    try {
+      const res = await fetch('/api/checkout', { method: 'POST' })
+      const data = await res.json()
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl
+      } else {
+        alert('Failed to create checkout. Please try again.')
+      }
+    } catch {
+      alert('Failed to create checkout. Please try again.')
     }
   }
 
@@ -244,15 +258,23 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
 
             <button
               onClick={handleGenerate}
-              disabled={loading || !input.trim() || !canGenerate}
+              disabled={loading || !input.trim() || (!canGenerate && !paid)}
               className="w-full py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading
                 ? t('common.loading')
-                : !canGenerate
-                  ? `${t('common.dailyLimit')} ${t('common.upgrade')}`
+                : !canGenerate && !paid
+                  ? t('common.dailyLimit') + ' ' + t('common.upgrade')
                   : t('common.generate')}
             </button>
+            {!canGenerate && !paid && (
+              <button
+                onClick={handleUpgrade}
+                className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-medium hover:from-purple-600 hover:to-pink-600 transition-all shadow-md"
+              >
+                ⭐ {t('common.upgrade')}
+              </button>
+            )}
           </div>
 
           {/* Error */}

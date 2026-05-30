@@ -54,5 +54,10 @@
   },
   "footer": {
     "copyright": "© 2026 文案宝"
+  },
+  "success": {
+    "title": "支付成功！",
+    "description": "感谢你的支持。现在你可以无限次使用文案宝了。",
+    "back": "开始创作"
   }
 }
