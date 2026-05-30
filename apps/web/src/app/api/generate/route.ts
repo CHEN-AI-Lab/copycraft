@@ -18,58 +18,38 @@ const toneInstructions: Record<string, string> = {
 }
 
 function extractCopy(raw: string): string {
-  // The model outputs thinking process (mostly English) followed by actual copy (Chinese + emoji).
-  // Strategy: find the last meaningful block with Chinese text.
-  const lines = raw.split('\n')
-  const chineseLineIdx: number[] = []
+  // Strip leading "Thinking Process:" and similar headers
+  let text = raw.replace(/^Thinking Process:?\s*/i, '').trim()
 
-  lines.forEach((line, i) => {
-    const trimmed = line.trim()
-    if (!trimmed) return
-    // Check for Chinese characters
-    if (/[\u4e00-\u9fff]/.test(trimmed)) {
-      chineseLineIdx.push(i)
+  // Try to find the actual copy: look for the last block that starts with emoji
+  // or hashtags (social media post style)
+  const lines = text.split('\n')
+
+  // Strategy: find lines that look like actual copy text
+  // (contains Chinese, has emojis, or starts with #)
+  let copyStart = -1
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i].trim()
+    if (!line) continue
+
+    // Detect copy-style content: starts with emoji, hashtag, or Chinese
+    const hasCopyMarker =
+      /^#[^\s]/.test(line) ||
+      /^[\u4e00-\u9fff]/.test(line) ||
+      /^[🧊🌟🍹🥥🍉💡🎉📸🏔️🌿🥾]/u.test(line) ||
+      /[#\u4e00-\u9fff]/.test(line)
+
+    if (hasCopyMarker) {
+      copyStart = i
+      break
     }
-  })
-
-  if (chineseLineIdx.length === 0) {
-    // No Chinese at all - return raw (might be English copy)
-    return raw.trim()
   }
 
-  // The actual copy usually starts near the last block of Chinese lines
-  // Find the last sequence of consecutive Chinese lines
-  let lastBlockStart = chineseLineIdx[0]
-  let currentBlockStart = chineseLineIdx[0]
-
-  for (let i = 1; i < chineseLineIdx.length; i++) {
-    if (chineseLineIdx[i] - chineseLineIdx[i - 1] <= 2) {
-      // Same block
-    } else {
-      // New block starts
-      currentBlockStart = chineseLineIdx[i]
-    }
-    lastBlockStart = currentBlockStart
+  if (copyStart > 0) {
+    text = lines.slice(copyStart).join('\n').trim()
   }
 
-  // Take from the start of the last Chinese block to the end
-  const result = lines.slice(lastBlockStart).join('\n').trim()
-
-  // Clean up any remaining thinking artifacts within the result
-  return result
-    .split('\n')
-    .filter((l) => {
-      const t = l.trim()
-      // Remove remaining English-only lines (thinking artifacts)
-      if (!/[\u4e00-\u9fff]/.test(t) && t.length > 10) {
-        if (/^[*\d\s]/.test(t)) return false
-        return false
-      }
-      return true
-    })
-    .join('\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
+  return text
 }
 
 export async function POST(req: NextRequest) {
