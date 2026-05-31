@@ -1,8 +1,8 @@
 import { getRequestConfig } from 'next-intl/server'
 import { hasLocale } from 'next-intl'
 import { locales, defaultLocale } from 'shared'
-import zhCN from '../../../../shared/messages/zh-CN.json'
-import en from '../../../../shared/messages/en.json'
+import zhCN from 'shared/messages/zh-CN.json'
+import en from 'shared/messages/en.json'
 
 const messageMap: Record<string, Record<string, unknown>> = {
   'zh-CN': zhCN as Record<string, unknown>,

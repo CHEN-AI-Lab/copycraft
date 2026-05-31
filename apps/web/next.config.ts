@@ -23,7 +23,7 @@ if (existsSync(workspaceEnv)) {
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts')
 
 const nextConfig: NextConfig = {
-  outputFileTracingRoot: process.cwd(),
+  outputFileTracingRoot: resolve(__dirname, '..', '..'),
 }
 
 export default withNextIntl(nextConfig)

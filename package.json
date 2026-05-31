@@ -9,7 +9,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "typecheck": "pnpm --filter web tsc --noEmit && cd shared && npx tsc --noEmit",
+    "typecheck": "pnpm --filter web exec -- tsc --noEmit && pnpm --filter shared exec -- tsc --noEmit",
     "check": "pnpm typecheck && pnpm lint && pnpm test",
     "setup": "pnpm install",
     "deploy": "echo 'Deploy: push to GitHub, import in Vercel'"
@@ -17,6 +17,7 @@
   "devDependencies": {
     "@playwright/test": "^1.60.0",
     "@types/node": "^22.19.19",
+    "typescript": "^5.7.0",
     "vitest": "^3.2.4"
   }
 }
