@@ -14,6 +14,7 @@
     "deploy": "echo 'Deploy: push to GitHub, import in Vercel'"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@types/node": "^22.19.19",
     "vitest": "^3.2.4"
   }
