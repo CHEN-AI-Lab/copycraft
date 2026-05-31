@@ -13,6 +13,9 @@ importers:
       '@tailwindcss/postcss':
         specifier: ^4.0.0
         version: 4.3.0
+      creem_io:
+        specifier: ^1.0.0
+        version: 1.1.0
       html-to-image:
         specifier: ^1.11.13
         version: 1.11.13
@@ -1059,6 +1062,11 @@ packages:
 
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
+
+  creem_io@1.1.0:
+    resolution: {integrity: sha512-wGMdp2HLOMjdohqt7OdxNvWHu+NrcokYz6y44eJgT98sQF1/XXf0EotDxagdo8aidefWhjKQWl/H8gZfr/T4JA==}
+    engines: {node: '>=16.0.0'}
+    deprecated: 'This package is deprecated. Please use the ''creem'' package instead: npm install creem'
 
   csstype@3.2.3:
     resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
@@ -2272,6 +2280,8 @@ snapshots:
   client-only@0.0.1: {}
 
   convert-source-map@2.0.0: {}
+
+  creem_io@1.1.0: {}
 
   csstype@3.2.3: {}
 

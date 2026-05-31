@@ -30,8 +30,10 @@ export default async function LocaleLayout({ children, params }: Props) {
               <h1 className="text-xl font-bold text-slate-800 dark:text-white">
                 {locale === 'zh-CN' ? '文案宝' : 'CopyCraft'}
               </h1>
-              <LanguageSwitcher locale={locale} />
-              <ThemeToggle />
+              <div className="flex items-center gap-2">
+                <LanguageSwitcher locale={locale} />
+                <ThemeToggle />
+              </div>
             </div>
             <main>{children}</main>
           </div>

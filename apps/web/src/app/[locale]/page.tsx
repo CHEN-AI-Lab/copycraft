@@ -22,14 +22,14 @@ interface Version {
 }
 
 const TEMPLATES = [
-  { label: '新品发布', enLabel: 'Product Launch', prompt: '发布一款新产品，吸引用户关注购买' },
-  { label: '节日祝福', enLabel: 'Holiday Greeting', prompt: '节日问候祝福，温暖有感染力' },
-  { label: '旅行打卡', enLabel: 'Travel Check-in', prompt: '分享旅行经历，美景美食体验' },
-  { label: '美食分享', enLabel: 'Food Sharing', prompt: '推荐一道美食，描述味道和体验' },
-  { label: '职场感悟', enLabel: 'Work Insights', prompt: '分享职场经验或人生感悟' },
-  { label: '读书笔记', enLabel: 'Book Review', prompt: '推荐一本书，分享读后感受' },
-  { label: '活动宣传', enLabel: 'Event Promo', prompt: '宣传活动，吸引参与报名' },
-  { label: '个人简介', enLabel: 'Bio/About', prompt: '自我介绍或个人品牌文案' },
+  { label: '新品发布', enLabel: 'Product Launch', prompt: '发布一款新产品，吸引用户关注购买', enPrompt: 'Announce a new product launch to attract users' },
+  { label: '节日祝福', enLabel: 'Holiday Greeting', prompt: '节日问候祝福，温暖有感染力', enPrompt: 'Write a warm holiday greeting that spreads joy' },
+  { label: '旅行打卡', enLabel: 'Travel Check-in', prompt: '分享旅行经历，美景美食体验', enPrompt: 'Share a travel experience with beautiful scenery and food' },
+  { label: '美食分享', enLabel: 'Food Sharing', prompt: '推荐一道美食，描述味道和体验', enPrompt: 'Recommend a dish, describe its flavor and dining experience' },
+  { label: '职场感悟', enLabel: 'Work Insights', prompt: '分享职场经验或人生感悟', enPrompt: 'Share workplace experience or life insights' },
+  { label: '读书笔记', enLabel: 'Book Review', prompt: '推荐一本书，分享读后感受', enPrompt: 'Recommend a book and share your thoughts on it' },
+  { label: '活动宣传', enLabel: 'Event Promo', prompt: '宣传活动，吸引参与报名', enPrompt: 'Promote an event to drive sign-ups and attendance' },
+  { label: '个人简介', enLabel: 'Bio/About', prompt: '自我介绍或个人品牌文案', enPrompt: 'Write a personal bio or personal brand introduction' },
 ]
 
 export default function HomePage({ params }: { params: Promise<{ locale: string }> }) {
@@ -92,7 +92,7 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
           platform,
           locale,
           tone: tone as string,
-          maxTokens: length === 'short' ? 400 : length === 'medium' ? 800 : 2000,
+          maxTokens: length === 'short' ? 600 : length === 'medium' ? 1200 : 3000,
           versionCount: 3,
         }),
       })
@@ -103,12 +103,13 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
       const v: Version[] = data.versions
       setVersions(v)
 
-      // Save to history with combined text
+      // Save to history with versions
       addItem({
         prompt: promptText,
         platform: platform as string,
         tone: tone as string,
         text: v.map((ver: Version) => `${ver.title}\n${ver.body}`).join('\n\n---\n\n'),
+        versions: v,
         locale,
       })
       increment()
@@ -129,8 +130,9 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
     if (!outputRef.current) return
     setExporting(true)
     try {
+      const isDark = document.documentElement.classList.contains('dark')
       const dataUrl = await toPng(outputRef.current, {
-        backgroundColor: '#ffffff',
+        backgroundColor: isDark ? '#1e293b' : '#ffffff',
         pixelRatio: 2,
       })
       const link = document.createElement('a')
@@ -159,7 +161,7 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
   }
 
   function selectTemplate(tmpl: typeof TEMPLATES[0]) {
-    setInput(isZh ? tmpl.prompt : tmpl.enLabel + ': ' + tmpl.prompt)
+    setInput(isZh ? tmpl.prompt : tmpl.enPrompt)
     setShowTemplates(false)
   }
 
@@ -249,9 +251,14 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
                 key={item.id}
                 className="p-3 bg-slate-50 dark:bg-slate-700 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors"
                 onClick={() => {
-                  // Try to parse versions from history text
-                  const lines = item.text.split('\n\n---\n\n')
-                  setVersions(lines.map((l) => ({ title: '', body: l, tags: [] })))
+                  // Restore versions from history
+                  if (item.versions && item.versions.length > 0) {
+                    setVersions(item.versions)
+                  } else {
+                    // Fallback for old history items
+                    const lines = item.text.split('\n\n---\n\n')
+                    setVersions(lines.map((l) => ({ title: '', body: l, tags: [] })))
+                  }
                   setInput(item.prompt)
                   setPlatform(item.platform as Platform)
                   setTone(item.tone as Tone)

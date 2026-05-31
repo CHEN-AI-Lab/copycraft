@@ -2,12 +2,19 @@
 
 import { useState, useEffect, useCallback } from 'react'
 
+export interface VersionData {
+  title: string
+  body: string
+  tags: string[]
+}
+
 export type HistoryItem = {
   id: string
   prompt: string
   platform: string
   tone: string
   text: string
+  versions?: VersionData[]
   locale: string
   createdAt: string
 }
