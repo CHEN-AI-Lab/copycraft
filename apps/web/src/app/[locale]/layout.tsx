@@ -23,6 +23,11 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   return (
     <html lang={locale}>
+      <head>
+        <script dangerouslySetInnerHTML={{
+          __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='dark')document.documentElement.classList.add('dark')}catch(e){}})()`
+        }} />
+      </head>
       <body className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <div className="max-w-4xl mx-auto px-4 py-6">
