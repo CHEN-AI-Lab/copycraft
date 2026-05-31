@@ -129,11 +129,14 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
   }
 
   async function handleShare(text: string) {
-    if (navigator.share) {
+    // Use navigator.share only on mobile (detect by touch support)
+    const isMobile = 'ontouchstart' in window && window.innerWidth < 768
+    if (isMobile && navigator.share) {
       try {
         await navigator.share({ title: isZh ? '文案宝' : 'CopyCraft', text })
       } catch { /* user cancelled */ }
     } else {
+      // Desktop: just copy to clipboard
       await navigator.clipboard.writeText(text)
       setShared(true)
       setTimeout(() => setShared(false), 2000)
@@ -514,20 +517,20 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
               </div>
 
               {/* Action buttons */}
-              <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 p-3 border-t bg-slate-50 dark:bg-slate-800/50">
-                <button onClick={() => handleCopy(currentVersion.body)} className="w-full sm:flex-1 py-2 text-sm rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors disabled:opacity-50">
+              <div className="flex gap-2 p-3 border-t bg-slate-50 dark:bg-slate-800/50 flex-wrap">
+                <button onClick={() => handleCopy(currentVersion.body)} className="flex-1 min-w-[80px] py-2 text-sm rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors disabled:opacity-50">
                   {copied ? '✅ ' + t('common.copied') : '📋 ' + t('common.copy')}
                 </button>
-                <button onClick={() => handleShare(currentVersion.body)} className="w-full sm:flex-1 py-2 text-sm rounded-lg bg-gray-500 text-white hover:bg-gray-600 transition-colors">
+                <button onClick={() => handleShare(currentVersion.body)} className="flex-1 min-w-[80px] py-2 text-sm rounded-lg bg-gray-500 text-white hover:bg-gray-600 transition-colors">
                   📤 {shared ? (isZh ? '已复制' : 'Copied') : (isZh ? '分享' : 'Share')}
                 </button>
-                <button onClick={() => startEdit(selectedVersion)} className="w-full sm:flex-1 py-2 text-sm rounded-lg bg-yellow-500 text-white hover:bg-yellow-600 transition-colors">
+                <button onClick={() => startEdit(selectedVersion)} className="flex-1 min-w-[80px] py-2 text-sm rounded-lg bg-yellow-500 text-white hover:bg-yellow-600 transition-colors">
                   ✏️ {isZh ? '编辑' : 'Edit'}
                 </button>
-                <button onClick={() => handleGenerate()} disabled={loading} className="w-full sm:flex-1 py-2 text-sm rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors disabled:opacity-50">
+                <button onClick={() => handleGenerate()} disabled={loading} className="flex-1 min-w-[80px] py-2 text-sm rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors disabled:opacity-50">
                   🔄 {t('common.regenerate')}
                 </button>
-                <button onClick={handleExportImage} disabled={exporting} className="w-full col-span-2 sm:flex-1 py-2 text-sm rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors disabled:opacity-50">
+                <button onClick={handleExportImage} disabled={exporting} className="flex-1 min-w-[80px] py-2 text-sm rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors disabled:opacity-50">
                   {exporting ? '⏳...' : '🖼️ ' + t('common.saveImage')}
                 </button>
               </div>
