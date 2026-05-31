@@ -1,33 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const platformNames: Record<string, string> = {
-  general: 'general social media',
-  wechat: 'WeChat Moments (朋友圈)',
-  xiaohongshu: 'Xiaohongshu (小红书)',
-  weibo: 'Weibo (微博)',
-  zhihu: 'Zhihu (知乎)',
-  douyin: 'Douyin (抖音)',
-}
-
-const toneLabels: Record<string, [string, string]> = {
-  normal: ['', ''],
-  humorous: ['语气幽默风趣，可以用网络梗和轻松的表达。', 'Use a funny, playful tone with internet slang and casual expressions.'],
-  emotional: ['语气煽情感人，能打动人心。', 'Use an emotional, touching tone that resonates deeply.'],
-  concise: ['简洁有力，一句话说清楚核心。', 'Keep it concise and powerful. Get the point across in one sentence.'],
-  formal: ['语气正式专业，适合商务场合。', 'Use a formal, professional tone suitable for business contexts.'],
-}
-
-const lengthLabels: Record<string, [string, string]> = {
-  short: ['严格写一句话（不超过50字），严禁使用换行', 'Strictly ONE sentence only (~50 words max), NO line breaks'],
-  medium: ['文案长度要求：3-5句话（100-200字左右）', 'Length: 3-5 sentences (~100-200 words)'],
-  long: ['文案长度要求：6句以上的段落（200-500字左右）', 'Length: 6+ sentence paragraph (~200-500 words)'],
-}
-
-interface Version {
-  title: string
-  body: string
-  tags: string[]
-}
+import type { Version } from 'shared'
+import { PLATFORM_NAMES as platformNames, TONE_LABELS as toneLabels, LENGTH_LABELS as lengthLabels } from 'shared'
 
 function parseVersions(raw: string): { title: string; body: string; tags: string[] }[] {
   try {

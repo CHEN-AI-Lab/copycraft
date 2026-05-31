@@ -5,21 +5,11 @@ import { useTranslations } from 'next-intl'
 import { useCopyHistory } from '@/hooks/useCopyHistory'
 import { useDailyLimit } from '@/hooks/useDailyLimit'
 import { toPng } from 'html-to-image'
+import type { Platform, Tone, Length, Version } from 'shared'
 
 const platforms = ['general', 'wechat', 'xiaohongshu', 'weibo', 'zhihu', 'douyin'] as const
-type Platform = (typeof platforms)[number]
-
 const tones = ['normal', 'humorous', 'emotional', 'concise', 'formal'] as const
-type Tone = (typeof tones)[number]
-
 const lengths = ['short', 'medium', 'long'] as const
-type Length = (typeof lengths)[number]
-
-interface Version {
-  title: string
-  body: string
-  tags: string[]
-}
 
 const TEMPLATES = [
   { label: '新品发布', enLabel: 'Product Launch', prompt: '发布一款新产品，吸引用户关注购买', enPrompt: 'Announce a new product launch to attract users' },
