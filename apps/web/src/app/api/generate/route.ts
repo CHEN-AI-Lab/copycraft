@@ -123,6 +123,12 @@ Platform: ${platformStr}`
       ? `关键词/想法：${prompt}`
       : `Keywords/ideas: ${prompt}`
 
+    let maxTokens = 2000
+    try {
+      const body = await req.clone().json()
+      maxTokens = body.maxTokens || 2000
+    } catch { /* use default */ }
+
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -135,7 +141,7 @@ Platform: ${platformStr}`
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        max_tokens: 2000,
+        max_tokens: maxTokens,
         temperature: 0.8,
         reasoning_effort: "none",
       }),

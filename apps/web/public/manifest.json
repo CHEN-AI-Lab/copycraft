@@ -1,0 +1,10 @@
+{
+  "name": "CopyCraft - AI Copywriting",
+  "short_name": "CopyCraft",
+  "description": "AI-powered copywriting tool for social media",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#3b82f6",
+  "icons": []
+}

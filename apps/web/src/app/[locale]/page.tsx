@@ -120,10 +120,16 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
     }
   }
 
-  async function handleCopy(text: string) {
-    await navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+  async function handleShare(text: string) {
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'CopyCraft', text })
+      } else {
+        await navigator.clipboard.writeText(text)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      }
+    } catch { /* user cancelled */ }
   }
 
   async function handleExportImage() {
@@ -408,6 +414,33 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
             </div>
           )}
 
+          {/* Loading skeleton */}
+          {loading && (
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border overflow-hidden animate-pulse">
+              <div className="flex border-b dark:border-slate-700">
+                {[0,1,2].map(i => (
+                  <div key={i} className="flex-1 h-10 bg-slate-200 dark:bg-slate-700 m-0.5 rounded" />
+                ))}
+              </div>
+              <div className="p-5 space-y-3">
+                <div className="h-5 w-2/3 bg-slate-200 dark:bg-slate-700 rounded" />
+                <div className="h-4 w-full bg-slate-200 dark:bg-slate-700 rounded" />
+                <div className="h-4 w-5/6 bg-slate-200 dark:bg-slate-700 rounded" />
+                <div className="h-4 w-3/4 bg-slate-200 dark:bg-slate-700 rounded" />
+                <div className="flex gap-1.5 mt-3">
+                  {[0,1,2].map(i => (
+                    <div key={i} className="h-5 w-16 bg-slate-200 dark:bg-slate-700 rounded-full" />
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-2 p-3 border-t bg-slate-50 dark:bg-slate-800/50">
+                {[0,1,2,3].map(i => (
+                  <div key={i} className="flex-1 h-9 bg-slate-200 dark:bg-slate-700 rounded-lg" />
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* ── Output (Multi-version) ── */}
           {versions.length > 0 && (
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border overflow-hidden">
@@ -474,8 +507,11 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
 
               {/* Action buttons */}
               <div className="flex gap-2 p-3 border-t bg-slate-50 dark:bg-slate-800/50">
-                <button onClick={() => handleCopy(currentVersion.body)} className="flex-1 py-2 text-sm rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors disabled:opacity-50">
+                <button onClick={() => handleShare(currentVersion.body)} className="flex-1 py-2 text-sm rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors disabled:opacity-50">
                   {copied ? t('common.copied') : t('common.copy')}
+                </button>
+                <button onClick={() => handleShare(currentVersion.body)} className="flex-1 py-2 text-sm rounded-lg bg-gray-500 text-white hover:bg-gray-600 transition-colors">
+                  📤 {isZh ? '分享' : 'Share'}
                 </button>
                 <button onClick={() => startEdit(selectedVersion)} className="flex-1 py-2 text-sm rounded-lg bg-yellow-500 text-white hover:bg-yellow-600 transition-colors">
                   ✏️ {isZh ? '编辑' : 'Edit'}
