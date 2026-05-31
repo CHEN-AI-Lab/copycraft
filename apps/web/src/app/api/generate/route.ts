@@ -17,6 +17,12 @@ const toneLabels: Record<string, [string, string]> = {
   formal: ['语气正式专业，适合商务场合。', 'Use a formal, professional tone suitable for business contexts.'],
 }
 
+const lengthLabels: Record<string, [string, string]> = {
+  short: ['文案长度要求：简短（1-2句话，50-100字左右）', 'Length: Short (1-2 sentences, ~50-100 words)'],
+  medium: ['文案长度要求：中等（3-5句话，100-200字左右）', 'Length: Medium (3-5 sentences, ~100-200 words)'],
+  long: ['文案长度要求：较长（6句以上，200-500字左右）', 'Length: Long (6+ sentences, ~200-500 words)'],
+}
+
 interface Version {
   title: string
   body: string
@@ -46,7 +52,7 @@ function parseVersions(raw: string): { title: string; body: string; tags: string
 
 export async function POST(req: NextRequest) {
   try {
-    const { prompt, platform, locale, tone, versionCount = 3 } = await req.json()
+    const { prompt, platform, locale, tone, length: len = 'medium', versionCount = 3 } = await req.json()
 
     if (!prompt || !prompt.trim()) {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 })
@@ -62,6 +68,8 @@ export async function POST(req: NextRequest) {
     const platformStr = platformNames[platform as string] || 'social media'
     const tonePair = toneLabels[tone as string] || ['', '']
     const toneStr = locale === 'zh-CN' ? tonePair[0] : tonePair[1]
+    const lenPair = lengthLabels[len as string] || ['', '']
+    const lenStr = locale === 'zh-CN' ? lenPair[0] : lenPair[1]
 
     const count = Math.min(Math.max(versionCount, 1), 3)
 
@@ -75,8 +83,7 @@ export async function POST(req: NextRequest) {
 - body: 正文文案（注意以下要求）
 - tags: 3-5个相关标签（带 # 号）
 
-正文写作要求：
-- 风格自然、有温度，符合社交媒体阅读习惯
+正文写作要求：\n- ${lenStr}\n- 风格自然、有温度，符合社交媒体阅读习惯
 - 适当使用 emoji 表情增强氛围
 - 适当分行，每行 1-2 句，不要写成长段落
 - 读起来轻松，像朋友聊天一样自然
@@ -101,9 +108,7 @@ Each version includes:
 - body: Main copy text (follow requirements below)
 - tags: 3-5 relevant hashtags (with # sign)
 
-Body writing requirements:
-- Natural, warm style suitable for social media reading
-- Use emojis appropriately to enhance the mood
+Body writing requirements:\n- ${lenStr}\n- Natural, warm style suitable for social media reading\n- Use emojis appropriately to enhance the mood
 - Break text into short lines (1-2 sentences per line), avoid long paragraphs
 - Read like a friendly conversation
 - Don't overuse emojis, just sprinkle them in naturally
