@@ -18,9 +18,9 @@ const toneLabels: Record<string, [string, string]> = {
 }
 
 const lengthLabels: Record<string, [string, string]> = {
-  short: ['文案长度要求：简短（1-2句话，50-100字左右）', 'Length: Short (1-2 sentences, ~50-100 words)'],
-  medium: ['文案长度要求：中等（3-5句话，100-200字左右）', 'Length: Medium (3-5 sentences, ~100-200 words)'],
-  long: ['文案长度要求：较长（6句以上，200-500字左右）', 'Length: Long (6+ sentences, ~200-500 words)'],
+  short: ['文案长度要求：一句话（不超过50字）', 'Length: One sentence (~50 words)'],
+  medium: ['文案长度要求：3-5句话（100-200字左右）', 'Length: 3-5 sentences (~100-200 words)'],
+  long: ['文案长度要求：6句以上的段落（200-500字左右）', 'Length: 6+ sentence paragraph (~200-500 words)'],
 }
 
 interface Version {

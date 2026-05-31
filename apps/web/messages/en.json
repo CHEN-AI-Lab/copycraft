@@ -36,8 +36,8 @@
     "formal": "Formal"
   },
   "length": {
-    "short": "Short (1 line)",
-    "medium": "Medium (3-5 lines)",
+    "short": "Short (1 sentence)",
+    "medium": "Medium (3-5 sentences)",
     "long": "Long (paragraph)"
   },
   "platforms": {
