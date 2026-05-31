@@ -34,17 +34,17 @@ function parseVersions(raw: string): { title: string; body: string; tags: string
     // Try direct JSON parse
     const parsed = JSON.parse(raw)
     if (parsed.versions && Array.isArray(parsed.versions)) {
-      return parsed.versions.map(formatVersion)
+      return parsed.versions
     }
-    if (Array.isArray(parsed)) return parsed.map(formatVersion)
+    if (Array.isArray(parsed)) return parsed
   } catch {
     // Try extracting JSON from markdown code block
     const match = raw.match(/```(?:json)?\s*([\s\S]*?)```/)
     if (match) {
       try {
         const parsed = JSON.parse(match[1])
-        if (parsed.versions && Array.isArray(parsed.versions)) return parsed.versions.map(formatVersion)
-        if (Array.isArray(parsed)) return parsed.map(formatVersion)
+        if (parsed.versions && Array.isArray(parsed.versions)) return parsed.versions
+        if (Array.isArray(parsed)) return parsed
       } catch { /* fall through */ }
     }
   }
@@ -52,10 +52,15 @@ function parseVersions(raw: string): { title: string; body: string; tags: string
   return []
 }
 
-function formatVersion(v: { title?: string; body?: string; tags?: string[] }): { title: string; body: string; tags: string[] } {
+function formatVersion(v: { title?: string; body?: string; tags?: string[] }, isShort = false): { title: string; body: string; tags: string[] } {
+  let body = (v.body || '').trim()
+  // For medium/long: ensure line breaks if AI forgot them
+  if (!isShort && body && !body.includes('\n')) {
+    body = body.replace(/([。！？.!?】])\s*/g, '$1\n').trim()
+  }
   return {
     title: v.title || '',
-    body: (v.body || '').trim(),
+    body,
     tags: (v.tags || []).filter(t => t),
   }
 }
@@ -176,8 +181,10 @@ Platform: ${platformStr}`
     const message = data.choices?.[0]?.message
     const raw = message?.content || message?.reasoning || ''
     const versions = parseVersions(raw)
+    // Re-format with correct length awareness
+    const formattedVersions = versions.map(v => formatVersion(v, len === 'short'))
 
-    return NextResponse.json({ versions })
+    return NextResponse.json({ versions: formattedVersions })
   } catch (e) {
     console.error('Generate error:', e)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
