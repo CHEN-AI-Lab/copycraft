@@ -4,6 +4,13 @@ import { locales } from 'shared'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import ThemeToggle from '@/components/ThemeToggle'
 import '../globals.css'
+import zhCN from '../../../../../shared/messages/zh-CN.json'
+import en from '../../../../../shared/messages/en.json'
+
+const messageMap: Record<string, Record<string, unknown>> = {
+  'zh-CN': zhCN as Record<string, unknown>,
+  'en': en as Record<string, unknown>,
+}
 
 type Props = {
   children: React.ReactNode
@@ -16,7 +23,7 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   let messages
   try {
-    messages = (await import(`../../../../../shared/messages/${locale}.json`)).default
+    messages = messageMap[locale] ?? messageMap['zh-CN']
   } catch {
     notFound()
   }
