@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation'
 import { useTransition } from 'react'
-import { locales, type Locale } from '../../next-intl.config'
+import { locales, type Locale } from 'shared'
 
 const localeNames: Record<Locale, string> = {
   'zh-CN': '中文',

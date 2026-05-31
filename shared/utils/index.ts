@@ -42,3 +42,6 @@ export function formatBody(body: string): string {
   }
   return text
 }
+
+// Copy-generation utilities (extracted from apps/web API routes)
+export { parseVersions, formatVersion } from './copy'

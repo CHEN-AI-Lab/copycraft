@@ -36,3 +36,5 @@ export function incrementDailyUsed(): number {
   localStorage.setItem('copycraft_daily', JSON.stringify({ date: today, count: next }))
   return next
 }
+
+export { creem } from './creem'

@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { creem } from '../../../lib/creem'
+import { creem } from 'shared'
 
 export async function POST(_request: NextRequest) {
   try {
     const productId = process.env.CREEM_PRODUCT_ID
     const apiKey = process.env.CREEM_API_KEY
     const appUrl = process.env.NEXT_PUBLIC_APP_URL
-
-    console.log('Checkout request:', { productId: !!productId, apiKey: !!apiKey, appUrl })
 
     if (!productId || !apiKey) {
       return NextResponse.json(

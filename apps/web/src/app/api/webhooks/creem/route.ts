@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { creem } from '../../../../lib/creem'
+import { creem } from 'shared'
 
 export async function POST(request: NextRequest) {
   const body = await request.text()
@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   try {
     await creem.webhooks.handleEvents(body, signature, {
       onCheckoutCompleted: async (data) => {
-        console.log('✅ Payment received from:', data.customer?.email)
+        // Payment received — server event, logged for monitoring
       },
     })
     return NextResponse.json({ received: true })

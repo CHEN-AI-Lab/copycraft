@@ -27,10 +27,37 @@ export const LENGTHS: LengthInfo[] = [
 ]
 
 export const DAILY_LIMIT_FREE = 5
+
+// Locale data — cross-platform shared
+export { locales, type Locale, defaultLocale } from './locales'
 export const MAX_TOKENS_SHORT = 600
 export const MAX_TOKENS_MEDIUM = 1200
 export const MAX_TOKENS_LONG = 3000
 export const MAX_VERSION_COUNT = 3
+
+// Platform/tone/length key arrays for UI iteration
+export const PLATFORM_KEYS = ['general', 'wechat', 'xiaohongshu', 'weibo', 'zhihu', 'douyin'] as const
+export const TONE_KEYS = ['normal', 'humorous', 'emotional', 'concise', 'formal'] as const
+export const LENGTH_KEYS = ['short', 'medium', 'long'] as const
+
+// Bilingual template prompts — used across all platforms
+export interface TemplateItem {
+  label: string
+  enLabel: string
+  prompt: string
+  enPrompt: string
+}
+
+export const TEMPLATES: TemplateItem[] = [
+  { label: '新品发布', enLabel: 'Product Launch', prompt: '发布一款新产品，吸引用户关注购买', enPrompt: 'Announce a new product launch to attract users' },
+  { label: '节日祝福', enLabel: 'Holiday Greeting', prompt: '节日问候祝福，温暖有感染力', enPrompt: 'Write a warm holiday greeting that spreads joy' },
+  { label: '旅行打卡', enLabel: 'Travel Check-in', prompt: '分享旅行经历，美景美食体验', enPrompt: 'Share a travel experience with beautiful scenery and food' },
+  { label: '美食分享', enLabel: 'Food Sharing', prompt: '推荐一道美食，描述味道和体验', enPrompt: 'Recommend a dish, describe its flavor and dining experience' },
+  { label: '职场感悟', enLabel: 'Work Insights', prompt: '分享职场经验或人生感悟', enPrompt: 'Share workplace experience or life insights' },
+  { label: '读书笔记', enLabel: 'Book Review', prompt: '推荐一本书，分享读后感受', enPrompt: 'Recommend a book and share your thoughts on it' },
+  { label: '活动宣传', enLabel: 'Event Promo', prompt: '宣传活动，吸引参与报名', enPrompt: 'Promote an event to drive sign-ups and attendance' },
+  { label: '个人简介', enLabel: 'Bio/About', prompt: '自我介绍或个人品牌文案', enPrompt: 'Write a personal bio or personal brand introduction' },
+]
 
 export const PLATFORM_NAMES: Record<string, string> = {
   general: 'general social media',

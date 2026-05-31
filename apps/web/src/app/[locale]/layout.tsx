@@ -1,6 +1,6 @@
 import { NextIntlClientProvider, hasLocale } from 'next-intl'
 import { notFound } from 'next/navigation'
-import { locales } from '../../../next-intl.config'
+import { locales } from 'shared'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import ThemeToggle from '@/components/ThemeToggle'
 import '../globals.css'
@@ -16,7 +16,7 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   let messages
   try {
-    messages = (await import(`../../../messages/${locale}.json`)).default
+    messages = (await import(`../../../../../shared/messages/${locale}.json`)).default
   } catch {
     notFound()
   }

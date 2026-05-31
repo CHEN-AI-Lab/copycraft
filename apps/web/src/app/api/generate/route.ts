@@ -1,42 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type { Version } from 'shared'
-import { PLATFORM_NAMES as platformNames, TONE_LABELS as toneLabels, LENGTH_LABELS as lengthLabels } from 'shared'
-
-function parseVersions(raw: string): { title: string; body: string; tags: string[] }[] {
-  try {
-    // Try direct JSON parse
-    const parsed = JSON.parse(raw)
-    if (parsed.versions && Array.isArray(parsed.versions)) {
-      return parsed.versions
-    }
-    if (Array.isArray(parsed)) return parsed
-  } catch {
-    // Try extracting JSON from markdown code block
-    const match = raw.match(/```(?:json)?\s*([\s\S]*?)```/)
-    if (match) {
-      try {
-        const parsed = JSON.parse(match[1])
-        if (parsed.versions && Array.isArray(parsed.versions)) return parsed.versions
-        if (Array.isArray(parsed)) return parsed
-      } catch { /* fall through */ }
-    }
-  }
-  // Fallback: return error
-  return []
-}
-
-function formatVersion(v: { title?: string; body?: string; tags?: string[] }, isShort = false): { title: string; body: string; tags: string[] } {
-  let body = (v.body || '').trim()
-  // For medium/long: ensure line breaks if AI forgot them
-  if (!isShort && body && !body.includes('\n')) {
-    body = body.replace(/([。！？.!?】])\s*/g, '$1\n').trim()
-  }
-  return {
-    title: v.title || '',
-    body,
-    tags: (v.tags || []).filter(t => t),
-  }
-}
+import { PLATFORM_NAMES as platformNames, TONE_LABELS as toneLabels, LENGTH_LABELS as lengthLabels, parseVersions, formatVersion } from 'shared'
 
 export async function POST(req: NextRequest) {
   try {
@@ -67,7 +31,7 @@ export async function POST(req: NextRequest) {
       : (locale === 'zh-CN' ? '- 适当分行，每行 1-2 句，不要写成长段落\n' : '- Break text into short lines (1-2 sentences per line), avoid long paragraphs\n')
 
     const systemPrompt = locale === 'zh-CN'
-      ? `你是一个专业的社交媒体文案写手。${toneStr}
+      ? `你是一个擅长聊天的朋友，帮用户写社交媒体文案。${toneStr}
 
 请创作 ${count} 个不同版本的文案，以JSON格式返回。
 
@@ -76,11 +40,8 @@ export async function POST(req: NextRequest) {
 - body: 正文文案（注意以下要求）
 - tags: 3-5个相关标签（带 # 号）
 
-正文写作要求：\n- ${lenStr}\n- 风格自然、有温度，符合社交媒体阅读习惯
-    - 适当使用 emoji 表情增强氛围
-    ${lineBreakRule}- 读起来轻松，像朋友聊天一样自然
-    - 不要堆砌表情，适当点缀即可
-    - 根据平台调整风格（朋友圈/小红书偏活泼，知乎偏深度）
+正文写作要求：\n- ${lenStr}\n- 写人话，像朋友在微信聊天一样自然，不用书面语\n- 禁止使用"首先、其次、最后、总的来说、综上所述"这类结构词\n- 禁止写成清单或分点格式，读起来像是一气呵成的话\n- 适当使用 emoji 表情增强氛围，不要堆砌
+    ${lineBreakRule}- 读起来要有真实感，像是真实用户在分享生活，不是营销号\n- 根据平台调整风格（朋友圈/小红书偏活泼口语化，知乎偏有料有观点）
 
 JSON格式示例：
 {
@@ -91,7 +52,7 @@ JSON格式示例：
 
 不要输出任何思考过程。只输出JSON。
 当前平台：${platformStr}`
-      : `You are a professional social media copywriter. ${toneStr}
+      : `You're a good friend helping a friend write social media posts. ${toneStr}
 
 Create ${count} different versions of copy, returning them in JSON format.
 
@@ -100,11 +61,9 @@ Each version includes:
 - body: Main copy text (follow requirements below)
 - tags: 3-5 relevant hashtags (with # sign)
 
-Body writing requirements:\n- ${lenStr}\n- Natural, warm style suitable for social media reading
-    - Use emojis appropriately to enhance the mood
-    ${lineBreakRule}- Read like a friendly conversation
-    - Don't overuse emojis, just sprinkle them in naturally
-    - Adjust style per platform (casual for social, deeper for professional)
+Body writing requirements:\n- ${lenStr}\n- Write like a real person texting a friend — casual, natural, no corporate speak\n- No "firstly, secondly, finally, in conclusion, in summary" — just write naturally
+    - Don't use bullet points or numbered lists — write in flowing paragraphs\n- Sprinkle emojis naturally, don't overdo it
+    ${lineBreakRule}- Make it sound authentic — like an actual person sharing their life, not an ad campaign\n- Adjust style per platform (casual for social media, more opinionated for Zhihu/Medium)
 
 JSON format example:
 {

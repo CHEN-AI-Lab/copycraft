@@ -2,25 +2,10 @@
 
 import { useState, use, useRef, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
-import { useCopyHistory } from '@/hooks/useCopyHistory'
-import { useDailyLimit } from '@/hooks/useDailyLimit'
+import { useCopyHistory, useDailyLimit } from 'shared'
 import { toPng } from 'html-to-image'
 import type { Platform, Tone, Length, Version } from 'shared'
-
-const platforms = ['general', 'wechat', 'xiaohongshu', 'weibo', 'zhihu', 'douyin'] as const
-const tones = ['normal', 'humorous', 'emotional', 'concise', 'formal'] as const
-const lengths = ['short', 'medium', 'long'] as const
-
-const TEMPLATES = [
-  { label: '新品发布', enLabel: 'Product Launch', prompt: '发布一款新产品，吸引用户关注购买', enPrompt: 'Announce a new product launch to attract users' },
-  { label: '节日祝福', enLabel: 'Holiday Greeting', prompt: '节日问候祝福，温暖有感染力', enPrompt: 'Write a warm holiday greeting that spreads joy' },
-  { label: '旅行打卡', enLabel: 'Travel Check-in', prompt: '分享旅行经历，美景美食体验', enPrompt: 'Share a travel experience with beautiful scenery and food' },
-  { label: '美食分享', enLabel: 'Food Sharing', prompt: '推荐一道美食，描述味道和体验', enPrompt: 'Recommend a dish, describe its flavor and dining experience' },
-  { label: '职场感悟', enLabel: 'Work Insights', prompt: '分享职场经验或人生感悟', enPrompt: 'Share workplace experience or life insights' },
-  { label: '读书笔记', enLabel: 'Book Review', prompt: '推荐一本书，分享读后感受', enPrompt: 'Recommend a book and share your thoughts on it' },
-  { label: '活动宣传', enLabel: 'Event Promo', prompt: '宣传活动，吸引参与报名', enPrompt: 'Promote an event to drive sign-ups and attendance' },
-  { label: '个人简介', enLabel: 'Bio/About', prompt: '自我介绍或个人品牌文案', enPrompt: 'Write a personal bio or personal brand introduction' },
-]
+import { PLATFORM_KEYS, TONE_KEYS, LENGTH_KEYS, TEMPLATES } from 'shared'
 
 export default function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = use(params)
@@ -236,7 +221,7 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
               className="px-2 py-1.5 text-sm border rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">{isZh ? '全部平台' : 'All'}</option>
-              {platforms.map((p) => (
+              {PLATFORM_KEYS.map((p) => (
                 <option key={p} value={p}>{t(`platforms.${p}`)}</option>
               ))}
             </select>
@@ -321,7 +306,7 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
             <div>
               <label className="text-xs text-slate-500 dark:text-slate-400 block mb-1.5">{t('common.selectPlatform')}</label>
               <div className="flex flex-wrap gap-1.5">
-                {platforms.map((p) => (
+                {PLATFORM_KEYS.map((p) => (
                   <button
                     key={p}
                     onClick={() => setPlatform(p)}
@@ -342,7 +327,7 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
               <div>
                 <label className="text-xs text-slate-500 dark:text-slate-400 block mb-1.5">{t('common.selectTone')}</label>
                 <div className="flex flex-wrap gap-1.5">
-                  {tones.map((tn) => (
+                  {TONE_KEYS.map((tn) => (
                     <button
                       key={tn}
                       onClick={() => setTone(tn)}
@@ -360,7 +345,7 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
               <div>
                 <label className="text-xs text-slate-500 dark:text-slate-400 block mb-1.5">{t('common.selectLength')}</label>
                 <div className="flex flex-wrap gap-1.5">
-                  {lengths.map((ln) => (
+                  {LENGTH_KEYS.map((ln) => (
                     <button
                       key={ln}
                       onClick={() => setLength(ln)}

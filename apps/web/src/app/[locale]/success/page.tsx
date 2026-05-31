@@ -1,25 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
+import { usePaymentStatus } from 'shared'
 
 export default function SuccessPage() {
   const t = useTranslations('success')
   const locale = useLocale()
   const router = useRouter()
-  const [status, setStatus] = useState<'processing' | 'done'>('processing')
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('copycraft_paid', 'true')
-      setStatus('done')
-    } catch {
-      setStatus('done')
-    }
-  }, [])
-
-  if (status === 'processing') return null
+  usePaymentStatus()
 
   return (
     <main className="flex min-h-[60vh] flex-col items-center justify-center px-4">
