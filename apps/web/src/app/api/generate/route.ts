@@ -18,7 +18,7 @@ const toneLabels: Record<string, [string, string]> = {
 }
 
 const lengthLabels: Record<string, [string, string]> = {
-  short: ['文案长度要求：一句话（不超过50字）', 'Length: One sentence (~50 words)'],
+  short: ['严格写一句话（不超过50字），严禁使用换行', 'Strictly ONE sentence only (~50 words max), NO line breaks'],
   medium: ['文案长度要求：3-5句话（100-200字左右）', 'Length: 3-5 sentences (~100-200 words)'],
   long: ['文案长度要求：6句以上的段落（200-500字左右）', 'Length: 6+ sentence paragraph (~200-500 words)'],
 }
@@ -33,21 +33,31 @@ function parseVersions(raw: string): { title: string; body: string; tags: string
   try {
     // Try direct JSON parse
     const parsed = JSON.parse(raw)
-    if (parsed.versions && Array.isArray(parsed.versions)) return parsed.versions
-    if (Array.isArray(parsed)) return parsed
+    if (parsed.versions && Array.isArray(parsed.versions)) {
+      return parsed.versions.map(formatVersion)
+    }
+    if (Array.isArray(parsed)) return parsed.map(formatVersion)
   } catch {
     // Try extracting JSON from markdown code block
     const match = raw.match(/```(?:json)?\s*([\s\S]*?)```/)
     if (match) {
       try {
         const parsed = JSON.parse(match[1])
-        if (parsed.versions && Array.isArray(parsed.versions)) return parsed.versions
-        if (Array.isArray(parsed)) return parsed
+        if (parsed.versions && Array.isArray(parsed.versions)) return parsed.versions.map(formatVersion)
+        if (Array.isArray(parsed)) return parsed.map(formatVersion)
       } catch { /* fall through */ }
     }
   }
-  // Fallback: wrap entire output as single version
-  return [{ title: '', body: raw.trim(), tags: [] }]
+  // Fallback: return error
+  return []
+}
+
+function formatVersion(v: { title?: string; body?: string; tags?: string[] }): { title: string; body: string; tags: string[] } {
+  return {
+    title: v.title || '',
+    body: (v.body || '').trim(),
+    tags: (v.tags || []).filter(t => t),
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -72,6 +82,11 @@ export async function POST(req: NextRequest) {
     const lenStr = locale === 'zh-CN' ? lenPair[0] : lenPair[1]
 
     const count = Math.min(Math.max(versionCount, 1), 3)
+    const isShort = len === 'short'
+
+    const lineBreakRule = isShort
+      ? ''
+      : (locale === 'zh-CN' ? '- 适当分行，每行 1-2 句，不要写成长段落\n' : '- Break text into short lines (1-2 sentences per line), avoid long paragraphs\n')
 
     const systemPrompt = locale === 'zh-CN'
       ? `你是一个专业的社交媒体文案写手。${toneStr}
@@ -84,11 +99,10 @@ export async function POST(req: NextRequest) {
 - tags: 3-5个相关标签（带 # 号）
 
 正文写作要求：\n- ${lenStr}\n- 风格自然、有温度，符合社交媒体阅读习惯
-- 适当使用 emoji 表情增强氛围
-- 适当分行，每行 1-2 句，不要写成长段落
-- 读起来轻松，像朋友聊天一样自然
-- 不要堆砌表情，适当点缀即可
-- 根据平台调整风格（朋友圈/小红书偏活泼，知乎偏深度）
+    - 适当使用 emoji 表情增强氛围
+    ${lineBreakRule}- 读起来轻松，像朋友聊天一样自然
+    - 不要堆砌表情，适当点缀即可
+    - 根据平台调整风格（朋友圈/小红书偏活泼，知乎偏深度）
 
 JSON格式示例：
 {
@@ -108,11 +122,11 @@ Each version includes:
 - body: Main copy text (follow requirements below)
 - tags: 3-5 relevant hashtags (with # sign)
 
-Body writing requirements:\n- ${lenStr}\n- Natural, warm style suitable for social media reading\n- Use emojis appropriately to enhance the mood
-- Break text into short lines (1-2 sentences per line), avoid long paragraphs
-- Read like a friendly conversation
-- Don't overuse emojis, just sprinkle them in naturally
-- Adjust style per platform (casual for social, deeper for professional)
+Body writing requirements:\n- ${lenStr}\n- Natural, warm style suitable for social media reading
+    - Use emojis appropriately to enhance the mood
+    ${lineBreakRule}- Read like a friendly conversation
+    - Don't overuse emojis, just sprinkle them in naturally
+    - Adjust style per platform (casual for social, deeper for professional)
 
 JSON format example:
 {
