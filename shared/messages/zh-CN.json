@@ -23,7 +23,11 @@
     "times": "次",
     "dailyLimit": "每日免费次数",
     "unlimited": "无限次",
-    "upgrade": "升级以解锁更多"
+    "upgrade": "升级以解锁更多",
+    "language": "语言",
+    "pro": "PRO",
+    "proActive": "已解锁全部功能",
+    "proTitle": "Pro 会员"
   },
   "nav": {
     "home": "首页"
@@ -51,7 +55,8 @@
   "home": {
     "title": "让你的内容更出彩",
     "subtitle": "输入一段想法，AI帮你生成多平台优化文案",
-    "cta": "免费使用"
+    "cta": "免费使用",
+    "generating": "AI正在创作…"
   },
   "footer": {
     "copyright": "© 2026 文案宝"
@@ -59,6 +64,39 @@
   "success": {
     "title": "支付成功！",
     "description": "感谢你的支持。现在你可以无限次使用文案宝了。",
+    "verifying": "正在验证支付状态...",
+    "unverifiedTitle": "支付验证中",
+    "unverifiedDescription": "已收到你的付款，Pro 权限将在同步后自动生效。",
     "back": "开始创作"
+  },
+  "auth": {
+    "signInTitle": "登录",
+    "signUpTitle": "注册",
+    "email": "邮箱",
+    "password": "密码",
+    "confirmPassword": "确认密码",
+    "signIn": "登录",
+    "signUp": "注册",
+    "signingIn": "登录中...",
+    "signingUp": "注册中...",
+    "signInWithGoogle": "使用 Google 登录",
+    "or": "或",
+    "noAccount": "还没有账号？",
+    "hasAccount": "已有账号？",
+    "signInLink": "登录",
+    "signUpLink": "注册",
+    "invalidCredentials": "邮箱或密码错误",
+    "passwordsDoNotMatch": "两次密码不一致",
+    "passwordTooShort": "密码至少6位",
+    "checkEmail": "请查看你的邮箱",
+    "checkEmailDesc": "我们已发送验证邮件，请点击邮件中的链接完成注册。",
+    "backToSignIn": "返回登录",
+    "configError": "系统配置错误，请稍后再试",
+    "unexpectedError": "发生意外错误，请重试",
+    "emailNotConfirmed": "邮箱未确认，请先查收验证邮件",
+    "userAlreadyExists": "该邮箱已注册，请直接登录",
+    "invalidEmail": "邮箱格式不正确",
+    "rateLimit": "操作太频繁，请稍后再试",
+    "signupDisabled": "邮箱注册暂未开放，请使用 Google 登录"
   }
 }

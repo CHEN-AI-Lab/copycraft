@@ -22,8 +22,12 @@
     "usedToday": "Used today",
     "times": "times",
     "dailyLimit": "Daily Free Limit",
-        "unlimited": "Unlimited",
-        "upgrade": "Upgrade to Unlock"
+    "unlimited": "Unlimited",
+    "upgrade": "Upgrade to Unlock",
+    "language": "Language",
+    "pro": "PRO",
+    "proActive": "Thanks for your support, all features unlocked",
+    "proTitle": "Pro Member"
   },
   "nav": {
     "home": "Home"
@@ -51,7 +55,8 @@
   "home": {
     "title": "Make your content shine",
     "subtitle": "Turn your ideas into platform-optimized copy with AI",
-    "cta": "Get Started Free"
+    "cta": "Get Started Free",
+    "generating": "AI is writing..."
   },
   "footer": {
     "copyright": "© 2026 CopyCraft"
@@ -59,6 +64,39 @@
   "success": {
     "title": "Payment Successful!",
     "description": "Thank you for your support. You now have unlimited access to CopyCraft.",
+    "verifying": "Verifying payment status...",
+    "unverifiedTitle": "Payment Verification in Progress",
+    "unverifiedDescription": "Your payment has been received. Pro access will be activated shortly after syncing.",
     "back": "Start Creating"
+  },
+  "auth": {
+    "signInTitle": "Sign In",
+    "signUpTitle": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "signIn": "Sign In",
+    "signUp": "Sign Up",
+    "signingIn": "Signing in...",
+    "signingUp": "Signing up...",
+    "signInWithGoogle": "Sign in with Google",
+    "or": "or",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "signInLink": "Sign In",
+    "signUpLink": "Sign Up",
+    "invalidCredentials": "Invalid email or password",
+    "passwordsDoNotMatch": "Passwords do not match",
+    "passwordTooShort": "Password must be at least 6 characters",
+    "checkEmail": "Check your email",
+    "checkEmailDesc": "We sent a verification email. Click the link to complete registration.",
+    "backToSignIn": "Back to Sign In",
+    "configError": "System configuration error. Please try again later.",
+    "unexpectedError": "An unexpected error occurred. Please try again.",
+    "emailNotConfirmed": "Email not confirmed. Please check your verification email.",
+    "userAlreadyExists": "This email is already registered. Please sign in.",
+    "invalidEmail": "Invalid email format.",
+    "rateLimit": "Too many requests. Please try again later.",
+    "signupDisabled": "Email sign up is currently disabled. Please use Google sign in."
   }
 }

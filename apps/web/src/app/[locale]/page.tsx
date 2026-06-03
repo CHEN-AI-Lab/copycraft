@@ -1,16 +1,25 @@
 'use client'
 
 import { useState, use, useRef, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useCopyHistory, useDailyLimit } from 'shared'
 import { toPng } from 'html-to-image'
-import type { Platform, Tone, Length, Version } from 'shared'
-import { PLATFORM_KEYS, TONE_KEYS, LENGTH_KEYS, TEMPLATES } from 'shared'
+import type { Platform, Tone, Length, Version, HistoryRecord } from 'shared'
+import { TEMPLATES } from 'shared'
+
+import { useUser } from '@/components/AuthProvider'
+import InfoBar from '@/components/InfoBar'
+import InputPanel from '@/components/InputPanel'
+import OutputPanel from '@/components/OutputPanel'
+import HistoryPanel from '@/components/HistoryPanel'
 
 export default function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = use(params)
+  const router = useRouter()
   const t = useTranslations()
   const outputRef = useRef<HTMLDivElement>(null)
+  const { user, loading: authLoading } = useUser()
 
   const [input, setInput] = useState('')
   const [platform, setPlatform] = useState<Platform>('general')
@@ -28,10 +37,15 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
   const [historySearch, setHistorySearch] = useState('')
   const [historyPlatformFilter, setHistoryPlatformFilter] = useState<string>('all')
   const [showTemplates, setShowTemplates] = useState(false)
+  const [elapsed, setElapsed] = useState(0)
 
   const { items: history, addItem, clearAll } = useCopyHistory()
-  const { remaining, canGenerate, increment, paid } = useDailyLimit(5)
+  const { remaining, increment, paid: paidLocal } = useDailyLimit(5)
 
+  // Paid status: server-side (from DB) takes precedence over localStorage
+  // Use localStorage as fallback only during auth loading, NOT when user is definitively null
+  const paid = user ? !!user.paid : authLoading ? paidLocal : false
+  const canGenerate = paid || remaining > 0
   const isZh = locale === 'zh-CN'
 
   // Filtered history
@@ -57,6 +71,7 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
     setSelectedVersion(0)
     setEditingVersion(null)
     setShowTemplates(false)
+    setElapsed(0)
 
     try {
       const res = await fetch('/api/generate', {
@@ -68,18 +83,22 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
           locale,
           tone: tone as string,
           length: length as string,
-          maxTokens: length === 'short' ? 600 : length === 'medium' ? 1200 : 3000,
-          versionCount: 3,
+          maxTokens: length === 'short' ? 800 : length === 'medium' ? 1200 : 2000,
+          versionCount: 2,
         }),
       })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || t('common.error'))
+      }
+
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || t('common.error'))
-      if (!data.versions || data.versions.length === 0) throw new Error(t('common.error'))
-
-      const v: Version[] = data.versions
+      if (!data.versions || !Array.isArray(data.versions) || data.versions.length === 0) {
+        throw new Error(t('common.error'))
+      }
+      const v = data.versions as Version[]
       setVersions(v)
-
-      // Save to history with versions
       addItem({
         prompt: promptText,
         platform: platform as string,
@@ -97,20 +116,33 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
   }
 
   async function handleCopy() {
-    // Copy full content: title + body + tags
     const v = currentVersion
     if (!v) return
     let text = ''
     if (v.title) text += v.title + '\n\n'
     text += v.body
     if (v.tags && v.tags.length > 0) text += '\n\n' + v.tags.join(' ')
-    await navigator.clipboard.writeText(text)
+    if (typeof navigator === 'undefined' || !navigator.clipboard) {
+      // Fallback: select-all + execCommand for SSR / non-secure context
+      try {
+        const ta = document.createElement('textarea')
+        ta.value = text
+        ta.style.position = 'fixed'
+        ta.style.left = '-9999px'
+        document.body.appendChild(ta)
+        ta.select()
+        document.execCommand('copy')
+        ta.remove()
+      } catch { /* clipboard unavailable */ }
+    } else {
+      await navigator.clipboard.writeText(text)
+    }
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
 
   async function handleExportImage() {
-    if (!outputRef.current) return
+    if (typeof document === 'undefined' || !outputRef.current) return
     setExporting(true)
     try {
       const isDark = document.documentElement.classList.contains('dark')
@@ -122,8 +154,8 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
       link.download = `copycraft-${Date.now()}.png`
       link.href = dataUrl
       link.click()
-    } catch (e) {
-      console.error('Export image failed:', e)
+    } catch {
+      // Export failed silently — user can retry
     } finally {
       setExporting(false)
     }
@@ -131,15 +163,26 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
 
   async function handleUpgrade() {
     try {
-      const res = await fetch('/api/checkout', { method: 'POST' })
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ locale }),
+      })
+      if (res.status === 401) {
+        // Not logged in — redirect to sign-in
+        router.push(`/${locale}/sign-in`)
+        return
+      }
       const data = await res.json()
       if (data.checkoutUrl) {
         window.location.href = data.checkoutUrl
-      } else {
+      } else if (typeof alert !== 'undefined') {
         alert('Failed to create checkout. Please try again.')
       }
     } catch {
-      alert('Failed to create checkout. Please try again.')
+      if (typeof alert !== 'undefined') {
+        alert('Failed to create checkout. Please try again.')
+      }
     }
   }
 
@@ -148,13 +191,38 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
     setShowTemplates(false)
   }
 
+  function handleHistorySelect(item: HistoryRecord) {
+    if (item.versions && item.versions.length > 0) {
+      setVersions(item.versions)
+    } else {
+      const lines = item.text.split('\n\n---\n\n')
+      setVersions(lines.map((l) => ({ title: '', body: l, tags: [] })))
+    }
+    setInput(item.prompt)
+    setPlatform(item.platform as Platform)
+    setTone(item.tone as Tone)
+    setShowHistory(false)
+  }
+
   function startEdit(vi: number) {
     setEditingVersion(vi)
     setEditText(versions[vi].body)
   }
 
   function saveEdit(vi: number) {
-    setVersions((prev) => prev.map((v, i) => (i === vi ? { ...v, body: editText } : v)))
+    setVersions((prev) => {
+      const next = prev.map((v, i) => (i === vi ? { ...v, body: editText } : v))
+      // Save edited version to history
+      addItem({
+        prompt: input,
+        platform: platform as string,
+        tone: tone as string,
+        text: editText,
+        versions: next,
+        locale,
+      })
+      return next
+    })
     setEditingVersion(null)
   }
 
@@ -173,215 +241,52 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
       </div>
 
       {/* Daily limit / Pro bar */}
-      {paid ? (
-        <div className="flex items-center justify-between bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-lg px-4 py-3 text-sm border border-amber-200 dark:border-amber-700/30">
-          <span className="flex items-center gap-2">
-            <span className="inline-flex items-center justify-center bg-amber-400 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-              👑 PRO
-            </span>
-            <span className="text-amber-700 dark:text-amber-300 font-medium">
-              {t('common.unlimited')}
-            </span>
-          </span>
-          <button onClick={() => setShowHistory(!showHistory)} className="text-amber-600 dark:text-amber-400 underline hover:no-underline">
-              {showHistory ? '✕ ' + t('common.result') : t('common.history') + ` (${history.length})`}
-          </button>
-        </div>
-      ) : (
-        <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 rounded-lg px-4 py-2 text-sm">
-          <span className="text-blue-700 dark:text-blue-300">
-            {t('common.dailyLimit')}: {remaining}/{5} {t('common.times')}
-          </span>
-          <button onClick={() => setShowHistory(!showHistory)} className="text-blue-600 dark:text-blue-400 underline hover:no-underline">
-              {showHistory ? '✕ ' + t('common.result') : t('common.history') + ` (${history.length})`}
-          </button>
-        </div>
-      )}
+      <InfoBar
+        paid={paid}
+        remaining={remaining}
+        historyCount={history.length}
+        showHistory={showHistory}
+        onToggleHistory={() => setShowHistory(!showHistory)}
+        authLoading={authLoading}
+      />
 
       {showHistory ? (
-        /* ── History Panel ── */
-        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border p-4 space-y-3 max-h-[32rem] overflow-y-auto">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-semibold text-slate-800 dark:text-white mr-auto">{t('common.history')}</h3>
-            {history.length > 0 && (
-              <button onClick={clearAll} className="text-xs text-red-500 hover:text-red-700">{t('common.clearHistory')}</button>
-            )}
-          </div>
-          {/* Search + filter */}
-          <div className="flex gap-2 flex-wrap">
-            <input
-              value={historySearch}
-              onChange={(e) => setHistorySearch(e.target.value)}
-              placeholder={isZh ? '搜索历史...' : 'Search history...'}
-              className="flex-1 min-w-[120px] px-3 py-1.5 text-sm border rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <select
-              value={historyPlatformFilter}
-              onChange={(e) => setHistoryPlatformFilter(e.target.value)}
-              className="px-2 py-1.5 text-sm border rounded-lg dark:bg-slate-700 dark:border-slate-600 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">{isZh ? '全部平台' : 'All'}</option>
-              {PLATFORM_KEYS.map((p) => (
-                <option key={p} value={p}>{t(`platforms.${p}`)}</option>
-              ))}
-            </select>
-          </div>
-          {filteredHistory.length === 0 ? (
-            <p className="text-slate-400 dark:text-slate-500 text-sm">{t('common.noHistory')}</p>
-          ) : (
-            filteredHistory.map((item) => (
-              <div
-                key={item.id}
-                className="p-3 bg-slate-50 dark:bg-slate-700 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors"
-                onClick={() => {
-                  // Restore versions from history
-                  if (item.versions && item.versions.length > 0) {
-                    setVersions(item.versions)
-                  } else {
-                    // Fallback for old history items
-                    const lines = item.text.split('\n\n---\n\n')
-                    setVersions(lines.map((l) => ({ title: '', body: l, tags: [] })))
-                  }
-                  setInput(item.prompt)
-                  setPlatform(item.platform as Platform)
-                  setTone(item.tone as Tone)
-                  setShowHistory(false)
-                }}
-              >
-                <div className="text-xs text-slate-400 dark:text-slate-500 mb-1 flex gap-2 flex-wrap">
-                  <span>{t(`platforms.${item.platform}`)}</span>
-                  <span>·</span>
-                  <span>{item.tone ? t(`tone.${item.tone}`) : '-'}</span>
-                  <span className="ml-auto">
-                    {new Date(item.createdAt).toLocaleString(isZh ? 'zh-CN' : 'en-US', {
-                      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                    })}
-                  </span>
-                </div>
-                <p className="text-sm text-slate-600 dark:text-slate-300 line-clamp-2">{item.text}</p>
-              </div>
-            ))
-          )}
-        </div>
+        <HistoryPanel
+          items={filteredHistory}
+          searchQuery={historySearch}
+          onSearchChange={setHistorySearch}
+          platformFilter={historyPlatformFilter}
+          onPlatformFilterChange={setHistoryPlatformFilter}
+          onClearAll={clearAll}
+          onSelect={handleHistorySelect}
+          isZh={isZh}
+        />
       ) : (
         <>
-          {/* ── Input Area ── */}
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border p-5 space-y-3">
-            {/* Template selector */}
-            <div className="relative">
-              <button
-                onClick={() => setShowTemplates(!showTemplates)}
-                className="text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 flex items-center gap-1"
-              >
-                📋 {isZh ? '文案模板' : 'Templates'} {showTemplates ? '▲' : '▼'}
-              </button>
-              {showTemplates && (
-                <div className="absolute top-6 left-0 z-10 bg-white dark:bg-slate-700 border dark:border-slate-600 rounded-lg shadow-lg p-2 flex flex-wrap gap-1.5 min-w-[280px]">
-                  {TEMPLATES.map((tmpl, i) => (
-                    <button
-                      key={i}
-                      onClick={() => selectTemplate(tmpl)}
-                      className="px-2.5 py-1 text-xs rounded-lg bg-slate-100 dark:bg-slate-600 text-slate-600 dark:text-slate-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 hover:text-blue-600 dark:hover:text-blue-300 transition-colors"
-                    >
-                      {isZh ? tmpl.label : tmpl.enLabel}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={t('common.placeholder')}
-              rows={3}
-              className="w-full p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white"
-            />
-            {/* Character count */}
-            <div className="text-xs text-slate-400 dark:text-slate-500 text-right">
-              {input.length} {isZh ? '字' : 'chars'}
-            </div>
-
-            {/* Platform select */}
-            <div>
-              <label className="text-xs text-slate-500 dark:text-slate-400 block mb-1.5">{t('common.selectPlatform')}</label>
-              <div className="flex flex-wrap gap-1.5">
-                {PLATFORM_KEYS.map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setPlatform(p)}
-                    className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                      platform === p
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                    }`}
-                  >
-                    {t(`platforms.${p}`)}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Tone + Length */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-slate-500 dark:text-slate-400 block mb-1.5">{t('common.selectTone')}</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {TONE_KEYS.map((tn) => (
-                    <button
-                      key={tn}
-                      onClick={() => setTone(tn)}
-                      className={`px-2.5 py-1 rounded-lg text-xs transition-colors ${
-                        tone === tn
-                          ? 'bg-purple-500 text-white'
-                          : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                      }`}
-                    >
-                      {t(`tone.${tn}`)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="text-xs text-slate-500 dark:text-slate-400 block mb-1.5">{t('common.selectLength')}</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {LENGTH_KEYS.map((ln) => (
-                    <button
-                      key={ln}
-                      onClick={() => setLength(ln)}
-                      className={`px-2.5 py-1 rounded-lg text-xs transition-colors ${
-                        length === ln
-                          ? 'bg-green-500 text-white'
-                          : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                      }`}
-                    >
-                      {t(`length.${ln}`)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <button
-              onClick={() => handleGenerate()}
-              disabled={loading || !input.trim() || (!canGenerate && !paid)}
-              className="w-full py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {loading
-                ? t('common.loading')
-                : !canGenerate && !paid
-                  ? t('common.dailyLimit') + ' ' + t('common.upgrade')
-                  : t('common.generate')}
-            </button>
-            {!canGenerate && !paid && (
-              <button
-                onClick={handleUpgrade}
-                className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-medium hover:from-purple-600 hover:to-pink-600 transition-all shadow-md"
-              >
-                ⭐ {t('common.upgrade')}
-              </button>
-            )}
-          </div>
+          <InputPanel
+            input={input}
+            onInputChange={setInput}
+            platform={platform}
+            onPlatformChange={setPlatform}
+            tone={tone}
+            onToneChange={setTone}
+            length={length}
+            onLengthChange={setLength}
+            loading={loading}
+            paid={paid}
+            canGenerate={canGenerate}
+            locale={locale}
+            onGenerate={() => handleGenerate()}
+            onUpgrade={handleUpgrade}
+            showTemplates={showTemplates}
+            onToggleTemplates={() => setShowTemplates(!showTemplates)}
+            onSelectTemplate={(prompt, enPrompt) => selectTemplate({
+              label: '',
+              enLabel: '',
+              prompt,
+              enPrompt,
+            } as typeof TEMPLATES[0])}
+          />
 
           {/* Error */}
           {error && (
@@ -391,113 +296,51 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
             </div>
           )}
 
-          {/* Loading skeleton */}
+          {/* Loading — animated during generation */}
           {loading && (
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border overflow-hidden animate-pulse">
-              <div className="flex border-b dark:border-slate-700">
-                {[0,1,2].map(i => (
-                  <div key={i} className="flex-1 h-10 bg-slate-200 dark:bg-slate-700 m-0.5 rounded" />
-                ))}
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex gap-1">
+                  <span className="w-2 h-2 bg-indigo-400 rounded-full animate-[dot-ping_2.5s_ease-in-out_infinite]" />
+                  <span className="w-2 h-2 bg-indigo-400 rounded-full animate-[dot-ping_2.5s_ease-in-out_infinite] animation-delay-200" />
+                  <span className="w-2 h-2 bg-indigo-400 rounded-full animate-[dot-ping_2.5s_ease-in-out_infinite] animation-delay-400" />
+                </span>
+                <span className="text-sm text-slate-500 dark:text-slate-400">
+                  {t('home.generating')}
+                  {elapsed > 0 && <span className="ml-2 text-slate-400">({Math.round(elapsed / 1000)}s)</span>}
+                </span>
               </div>
-              <div className="p-5 space-y-3">
-                <div className="h-5 w-2/3 bg-slate-200 dark:bg-slate-700 rounded" />
-                <div className="h-4 w-full bg-slate-200 dark:bg-slate-700 rounded" />
-                <div className="h-4 w-5/6 bg-slate-200 dark:bg-slate-700 rounded" />
-                <div className="h-4 w-3/4 bg-slate-200 dark:bg-slate-700 rounded" />
-                <div className="flex gap-1.5 mt-3">
-                  {[0,1,2].map(i => (
-                    <div key={i} className="h-5 w-16 bg-slate-200 dark:bg-slate-700 rounded-full" />
-                  ))}
-                </div>
-              </div>
-              <div className="flex gap-2 p-3 border-t bg-slate-50 dark:bg-slate-800/50">
-                {[0,1,2,3].map(i => (
-                  <div key={i} className="flex-1 h-9 bg-slate-200 dark:bg-slate-700 rounded-lg" />
-                ))}
+              {/* Progress bar — fills left to right, one pass */}
+              <div className="mt-3 w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden relative">
+                <div
+                  className="h-full bg-gradient-to-r from-indigo-400 to-indigo-500 rounded-full animate-[fill-progress_60s_ease-out_forwards]"
+                />
               </div>
             </div>
           )}
 
-          {/* ── Output (Multi-version) ── */}
+          {/* Output */}
           {versions.length > 0 && (
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border overflow-hidden">
-              {/* Version tabs */}
-              {versions.length > 1 && (
-                <div className="flex border-b dark:border-slate-700">
-                  {versions.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => { setSelectedVersion(i); setEditingVersion(null) }}
-                      className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
-                        selectedVersion === i
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-                      }`}
-                    >
-                      {isZh ? `版本 ${i + 1}` : `Version ${i + 1}`}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <div className="p-5" ref={outputRef}>
-                {/* Title */}
-                {currentVersion.title && (
-                  <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-3">{currentVersion.title}</h3>
-                )}
-
-                {/* Body (editable) */}
-                {editingVersion === selectedVersion ? (
-                  <div className="space-y-2">
-                    <textarea
-                      value={editText}
-                      onChange={(e) => setEditText(e.target.value)}
-                      rows={6}
-                      className="w-full p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600 dark:text-white text-sm leading-relaxed"
-                    />
-                    <div className="flex gap-2">
-                      <button onClick={() => saveEdit(selectedVersion)} className="px-4 py-1.5 text-sm rounded-lg bg-blue-500 text-white hover:bg-blue-600">
-                        {isZh ? '保存' : 'Save'}
-                      </button>
-                      <button onClick={cancelEdit} className="px-4 py-1.5 text-sm rounded-lg bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-500">
-                        {isZh ? '取消' : 'Cancel'}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-lg whitespace-pre-wrap text-slate-700 dark:text-slate-300 text-sm leading-relaxed">
-                    {currentVersion.body}
-                  </div>
-                )}
-
-                {/* Tags */}
-                {currentVersion.tags && currentVersion.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-3">
-                    {currentVersion.tags.map((tag, i) => (
-                      <span key={i} className="px-2 py-0.5 text-xs rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Action buttons */}
-              <div className="flex gap-2 p-3 border-t bg-slate-50 dark:bg-slate-800/50">
-                <button onClick={handleCopy} className="flex-1 py-2 text-sm rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors disabled:opacity-50">
-                  {copied ? '✅ ' + t('common.copied') : '📋 ' + t('common.copy')}
-                </button>
-                <button onClick={() => startEdit(selectedVersion)} className="flex-1 py-2 text-sm rounded-lg bg-yellow-500 text-white hover:bg-yellow-600 transition-colors">
-                  ✏️ {isZh ? '编辑' : 'Edit'}
-                </button>
-                <button onClick={() => handleGenerate()} disabled={loading} className="flex-1 py-2 text-sm rounded-lg bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors disabled:opacity-50">
-                  🔄 {t('common.regenerate')}
-                </button>
-                <button onClick={handleExportImage} disabled={exporting} className="flex-1 py-2 text-sm rounded-lg bg-green-500 text-white hover:bg-green-600 transition-colors disabled:opacity-50">
-                  {exporting ? '⏳...' : '🖼️ ' + t('common.saveImage')}
-                </button>
-              </div>
-            </div>
+            <OutputPanel
+              versions={versions}
+              selectedVersion={selectedVersion}
+              onSelectVersion={setSelectedVersion}
+              currentVersion={currentVersion}
+              editingVersion={editingVersion}
+              editText={editText}
+              onEditTextChange={setEditText}
+              onSaveEdit={saveEdit}
+              onCancelEdit={cancelEdit}
+              onStartEdit={startEdit}
+              loading={loading}
+              locale={locale}
+              onCopy={handleCopy}
+              onExportImage={handleExportImage}
+              onRegenerate={() => handleGenerate()}
+              exporting={exporting}
+              copied={copied}
+              outputRef={outputRef}
+            />
           )}
         </>
       )}

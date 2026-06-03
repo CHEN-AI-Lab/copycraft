@@ -30,18 +30,9 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
   }
 }
 
-/**
- * Format body text with line breaks preserved
- */
-export function formatBody(body: string): string {
-  if (!body) return ''
-  let text = body.trim()
-  // Ensure \n after sentence endings if AI forgot
-  if (!text.includes('\n')) {
-    text = text.replace(/([。！？.!?】])\s*/g, '$1\n').trim()
-  }
-  return text
-}
-
 // Copy-generation utilities (extracted from apps/web API routes)
 export { parseVersions, formatVersion } from './copy'
+// System prompt builders (pure functions, cross-platform)
+export { buildSystemPrompt, buildUserPrompt, getMaxTokens, getVersionCount } from './prompts'
+// Auth error translation (maps Supabase errors to i18n keys)
+export { translateAuthError } from './auth-errors'

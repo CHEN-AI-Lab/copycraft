@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { generateId, truncate, formatBody } from '../../shared/utils'
+import { generateId, truncate } from '../../shared/utils'
 import { generationRequestSchema } from '../../shared/validators'
 import { PLATFORMS, TONES, LENGTHS } from '../../shared/constants'
 
@@ -25,25 +25,6 @@ describe('shared/utils', () => {
     })
     it('returns empty string for falsy input', () => {
       expect(truncate('', 5)).toBe('')
-    })
-  })
-
-  describe('formatBody', () => {
-    it('returns empty string for empty input', () => {
-      expect(formatBody('')).toBe('')
-    })
-
-    it('preserves existing line breaks', () => {
-      const withBreaks = 'line one\nline two\nline three'
-      expect(formatBody(withBreaks)).toBe(withBreaks)
-    })
-
-    it('adds line breaks after Chinese period in single-line content', () => {
-      const oneLine = '句子一。句子二。句子三'
-      const result = formatBody(oneLine)
-      expect(result).toContain('句子一。')
-      expect(result).toContain('句子二。')
-      expect(result.split('\n').length).toBeGreaterThanOrEqual(3)
     })
   })
 })

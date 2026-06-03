@@ -1,0 +1,22 @@
+// Prisma schema — CopyCraft user system
+// Database URL is configured via prisma.config.ts (for migrate) and
+// passed to PrismaClient constructor at runtime (for queries).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Users registered via Supabase Auth; paid status tracked here.
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  avatarUrl String?
+  paid      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

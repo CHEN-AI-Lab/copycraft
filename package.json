@@ -16,7 +16,9 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
+    "@prisma/client": "^7.8.0",
     "@types/node": "^22.19.19",
+    "prisma": "^7.8.0",
     "typescript": "^5.7.0",
     "vitest": "^3.2.4"
   }

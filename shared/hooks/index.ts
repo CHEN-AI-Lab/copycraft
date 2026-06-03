@@ -34,17 +34,39 @@ const PAID_KEY = 'copycraft_paid'
 
 export function usePaymentStatus() {
   const [ready, setReady] = useState(false)
+  const [verified, setVerified] = useState(false)
 
   useEffect(() => {
-    try {
-      localStorage.setItem(PAID_KEY, 'true')
-    } catch {
-      // localStorage unavailable (SSR / mini-program / restricted context)
+    let cancelled = false
+
+    async function verify() {
+      try {
+        // First, verify paid status with the server
+        const res = await fetch('/api/user/paid')
+        const data = await res.json()
+        const isPaid = data.paid === true
+
+        if (cancelled) return
+
+        // Only write to localStorage if server confirms payment
+        if (isPaid) {
+          try {
+            localStorage.setItem(PAID_KEY, 'true')
+          } catch { /* localStorage unavailable */ }
+          setVerified(true)
+        }
+      } catch {
+        // Server unreachable — don't grant access
+      }
+      if (!cancelled) setReady(true)
     }
-    setReady(true)
+
+    verify()
+
+    return () => { cancelled = true }
   }, [])
 
-  return { ready }
+  return { ready, verified }
 }
 
 // ─── useCopyHistory ──────────────────────────────────
@@ -67,7 +89,12 @@ interface HistoryRecord {
 }
 
 const STORAGE_KEY = 'copycraft_history'
-const MAX_ITEMS = 50
+const MAX_DAYS = 7
+
+function keepRecent(items: HistoryRecord[]): HistoryRecord[] {
+  const cutoff = Date.now() - MAX_DAYS * 24 * 60 * 60 * 1000
+  return items.filter((item) => new Date(item.createdAt).getTime() > cutoff)
+}
 
 export function useCopyHistory() {
   const [items, setItems] = useState<HistoryRecord[]>([])
@@ -75,7 +102,15 @@ export function useCopyHistory() {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
-      if (raw) setItems(JSON.parse(raw))
+      if (raw) {
+        const all = JSON.parse(raw) as HistoryRecord[]
+        const recent = keepRecent(all)
+        // Clean up stale entries from localStorage
+        if (recent.length < all.length) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(recent))
+        }
+        setItems(recent)
+      }
     } catch { /* ignore */ }
   }, [])
 
@@ -86,7 +121,7 @@ export function useCopyHistory() {
       createdAt: new Date().toISOString(),
     }
     setItems((prev) => {
-      const next = [newItem, ...prev].slice(0, MAX_ITEMS)
+      const next = [newItem, ...keepRecent(prev)]
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
       return next
     })
@@ -112,15 +147,24 @@ function getTodayKey(): string {
 }
 
 export function useDailyLimit(maxFree: number = 5) {
+  // Read payment status synchronously on init to avoid flash of free tier
   const [used, setUsed] = useState(0)
-  const [paid, setPaid] = useState(false)
+  const [paid, setPaid] = useState(() => {
+    try {
+      if (typeof localStorage === 'undefined') return false
+      return localStorage.getItem(PAID_LIMIT_KEY) === 'true'
+    } catch {
+      return false
+    }
+  })
 
   useEffect(() => {
     try {
+      // Always read usage count — don't skip even if paid flag is set
+      // (paid status from auth is authoritative; localStorage paid is just a cache)
       const paidRaw = localStorage.getItem(PAID_LIMIT_KEY)
       if (paidRaw === 'true') {
         setPaid(true)
-        return
       }
       const raw = localStorage.getItem(LIMIT_KEY)
       if (raw) {
@@ -141,13 +185,12 @@ export function useDailyLimit(maxFree: number = 5) {
   const canGenerate = paid || remaining > 0
 
   const increment = useCallback(() => {
-    if (paid) return
     setUsed((prev) => {
       const next = prev + 1
       localStorage.setItem(LIMIT_KEY, JSON.stringify({ date: getTodayKey(), count: next }))
       return next
     })
-  }, [paid])
+  }, [])
 
   return { used, remaining, canGenerate, increment, paid }
 }

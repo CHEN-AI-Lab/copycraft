@@ -56,3 +56,30 @@ export interface LengthInfo {
   labelZh: string
   labelEn: string
 }
+
+export interface HistoryRecord {
+  id: string
+  prompt: string
+  platform: string
+  tone: string
+  text: string
+  versions?: Version[]
+  locale: string
+  createdAt: string
+}
+
+// ─── User (database model mirrored for type-safety) ──────────────
+
+export interface User {
+  id: string
+  email: string
+  name: string | null
+  avatarUrl: string | null
+  paid: boolean
+  createdAt: string
+}
+
+export interface UserSession {
+  user: User | null
+  loading: boolean
+}
