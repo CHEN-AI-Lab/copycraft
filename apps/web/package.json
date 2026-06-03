@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --port 3000",
     "build": "next build",
+    "postinstall": "npx prisma generate",
     "start": "next start",
     "lint": "eslint src/",
     "test": "vitest run"
