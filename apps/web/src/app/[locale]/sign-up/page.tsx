@@ -25,8 +25,13 @@ export default function SignUpPage() {
       return
     }
 
-    if (password.length < 6) {
-      setError(t('passwordTooShort'))
+    if (password.length < 8) {
+      setError(locale === 'zh-CN' ? '密码至少8位' : 'Password must be at least 8 characters')
+      return
+    }
+
+    if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+      setError(locale === 'zh-CN' ? '密码需包含大小写字母和数字' : 'Password must include lowercase, uppercase, and a number')
       return
     }
 
@@ -142,7 +147,7 @@ export default function SignUpPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
                 className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800/50 text-slate-800 dark:text-white text-sm focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/30 focus:border-indigo-400 dark:focus:border-indigo-500 outline-none transition-all"
               />
             </div>
