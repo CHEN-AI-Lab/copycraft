@@ -9,6 +9,7 @@ import { translateAuthError } from 'shared'
 export default function SignInPage() {
   const t = useTranslations('auth')
   const locale = useLocale()
+  const isZh = locale === 'zh-CN'
   const router = useRouter()
 
   const [email, setEmail] = useState('')
@@ -67,7 +68,9 @@ export default function SignInPage() {
         options: { redirectTo: `${window.location.origin}/${locale}/auth/callback` },
       })
 
-      if (oauthError) setError(translateAuthError(oauthError.message, t))
+      if (oauthError) {
+        setError(isZh ? 'Google 登录暂未配置，请使用邮箱密码登录' : 'Google sign-in is not configured yet. Please use email login instead.')
+      }
     } catch {
       setError(t('unexpectedError'))
     } finally {
