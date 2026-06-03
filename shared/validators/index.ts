@@ -14,6 +14,7 @@ export const generationRequestSchema = z.object({
   locale: localeSchema.default('zh-CN'),
   tone: toneSchema.default('normal'),
   length: lengthSchema.default('medium'),
+  template: z.string().optional(),
   maxTokens: z.number().min(100).max(4000).default(1200),
   versionCount: z.number().min(1).max(3).default(3),
 })

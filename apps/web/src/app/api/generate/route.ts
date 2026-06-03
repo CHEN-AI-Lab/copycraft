@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: firstError.message }, { status: 400 })
   }
 
-  const { prompt, platform, locale, tone, length, maxTokens, versionCount } = parsed.data
+  const { prompt, platform, locale, tone, length, template, maxTokens, versionCount } = parsed.data
 
   // ── Auth check — enforce paid status ──
   try {
@@ -105,5 +105,34 @@ export async function POST(request: NextRequest) {
     formatVersion(v, length === 'short')
   )
   const result = formatted.slice(0, count)
+
+  // ── Log generation ──
+  try {
+    const { createServerClient } = await import('@supabase/ssr')
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    if (supabaseUrl && supabaseAnonKey) {
+      const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+        cookies: {
+          getAll() { return request.cookies.getAll() },
+          setAll() { /* no write needed */ },
+        },
+      })
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const prisma = getPrisma()
+        await prisma.generationLog.create({
+          data: {
+            userId: user.id,
+            platform,
+            template: template ?? null,
+            tone,
+            length,
+          },
+        }).catch(() => { /* non-blocking */ })
+      }
+    }
+  } catch { /* non-blocking */ }
+
   return NextResponse.json({ versions: result })
 }
