@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getPrisma } from '../../../../prisma'
 
 /**
  * POST /api/checkout
  * Creates a Creem checkout session.
- * REQUIRES authentication — returns 401 if user is not logged in.
- * User ID comes from the Supabase session cookie, NOT from request body.
+ * No database needed — just verifies login, then creates checkout.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -15,16 +13,10 @@ export async function POST(request: NextRequest) {
     const apiKey = process.env.CREEM_API_KEY
 
     if (!supabaseUrl || !supabaseAnonKey) {
-      return NextResponse.json(
-        { error: 'Auth not configured' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'Auth not configured' }, { status: 500 })
     }
     if (!productId || !apiKey) {
-      return NextResponse.json(
-        { error: 'Payment not configured' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'Payment not configured' }, { status: 500 })
     }
 
     // ── Authenticate from server-side session cookie ──────────────
@@ -44,19 +36,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const userId = user.id
-
-    // ── Ensure user record exists in DB ──────────────────────────
-    const prisma = getPrisma()
-    await prisma.user.upsert({
-      where: { id: userId },
-      update: {},
-      create: {
-        id: userId,
-        email: user.email ?? `${userId}@placeholder.local`,
-      },
-    }).catch(() => { /* ignore race condition */ })
-
     // ── Read locale from request body ────────────────────────────
     let locale = 'zh-CN'
     try {
@@ -69,9 +48,7 @@ export async function POST(request: NextRequest) {
     const checkout = await creem.checkouts.create({
       productId,
       successUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://copycraft-mauve.vercel.app'}/${locale}/success`,
-      metadata: {
-        userId,
-      },
+      metadata: { userId: user.id },
     })
 
     return NextResponse.json({ checkoutUrl: checkout.checkoutUrl })
