@@ -176,12 +176,14 @@ export default function HomePage({ params }: { params: Promise<{ locale: string 
       const data = await res.json()
       if (data.checkoutUrl) {
         window.location.href = data.checkoutUrl
+      } else if (data.error && typeof alert !== 'undefined') {
+        alert(data.error)
       } else if (typeof alert !== 'undefined') {
-        alert('Failed to create checkout. Please try again.')
+        alert('创建失败，请重试')
       }
     } catch {
       if (typeof alert !== 'undefined') {
-        alert('Failed to create checkout. Please try again.')
+        alert('网络错误，请重试')
       }
     }
   }
