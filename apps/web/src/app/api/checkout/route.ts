@@ -43,14 +43,20 @@ export async function POST(request: NextRequest) {
       if (body.locale === 'en') locale = 'en'
     } catch { /* use default */ }
 
+    // ── Build a valid success URL ─────────────────────────────────
+    // Creem requires a valid absolute URL for successUrl
+    const PRODUCTION_URL = 'https://copycraft-mauve.vercel.app'
+    const rawUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+    const baseUrl = rawUrl.includes('localhost') ? PRODUCTION_URL : (rawUrl || PRODUCTION_URL)
+    const successUrl = `${baseUrl.replace(/\/+$/, '')}/${locale}/success`
+
+    console.log('[checkout] successUrl:', successUrl)
+
     // ── Create Creem checkout with userId as metadata ────────────
     const { creem } = await import('shared/api')
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
-    // Creem requires a real URL — ignore localhost env if set on production
-    const baseUrl = appUrl.includes('localhost') ? 'https://copycraft-mauve.vercel.app' : appUrl
     const checkout = await creem.checkouts.create({
       productId,
-      successUrl: `${baseUrl || 'https://copycraft-mauve.vercel.app'}/${locale}/success`,
+      successUrl,
       metadata: { userId: user.id },
     })
 
