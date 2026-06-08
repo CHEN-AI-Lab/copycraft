@@ -61,8 +61,16 @@ export default async function LocaleLayout({ children, params }: Props) {
                     </span>
                   </Link>
 
-                  <div className="flex items-center gap-1.5">
-                    <UserMenu />
+                  <div className="flex items-center gap-3">
+                    <Link
+                      href={`/${locale}/pricing`}
+                      className="text-sm text-slate-500 dark:text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"
+                    >
+                      {locale === 'zh-CN' ? '定价' : 'Pricing'}
+                    </Link>
+                    <div className="flex items-center gap-1.5">
+                      <UserMenu />
+                    </div>
                     <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5" />
                     <LanguageSwitcher />
                     <ThemeToggle />

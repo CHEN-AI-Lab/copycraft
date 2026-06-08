@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     const baseUrl = rawUrl.includes('localhost') ? PRODUCTION_URL : (rawUrl || PRODUCTION_URL)
     const successUrl = `${baseUrl.replace(/\/+$/, '')}/${locale}/success`
 
-    console.log('[checkout] successUrl:', successUrl)
+    console.warn('[checkout] successUrl:', successUrl)
 
     // ── Create Creem checkout with userId as metadata ────────────
     const { creem } = await import('shared/api')
