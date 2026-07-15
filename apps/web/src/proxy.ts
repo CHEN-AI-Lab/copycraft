@@ -1,16 +1,11 @@
 import createMiddleware from 'next-intl/middleware'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { locales, defaultLocale } from 'shared'
+import { routing } from '@/i18n/routing'
 
-const intlMiddleware = createMiddleware({
-  locales,
-  defaultLocale,
-  localeDetection: true,
-  localePrefix: 'always',
-})
+const intlMiddleware = createMiddleware(routing)
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
