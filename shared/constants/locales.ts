@@ -1,5 +1,6 @@
-// Locale definitions — cross-platform shared data
-// All platforms (Web, MiniProgram, App, Desktop) use the same locales
+// ─── Locale Configuration ───
+// Single source of truth for supported languages.
+// All platforms (Web, MiniProgram, App, Desktop) read from here.
 
 export const locales = ['zh-CN', 'en'] as const
 export type Locale = (typeof locales)[number]
