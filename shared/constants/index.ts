@@ -102,3 +102,15 @@ export const LENGTH_LABELS: Record<string, [string, string]> = {
   medium: ['文案长度要求：3-5句话（100-200字左右）', 'Length: 3-5 sentences (~100-200 words)'],
   long: ['文案长度要求：6句以上的段落（200-500字左右）', 'Length: 6+ sentence paragraph (~200-500 words)'],
 }
+
+export const WORKER_URL =
+  (typeof process !== 'undefined' &&
+    (process as any).env?.NEXT_PUBLIC_WORKER_URL) ||
+  'https://stats.aaigc.workers.dev'
+
+// Fallback tracking endpoint for users who cannot reach the Worker (e.g. China)
+// Sends tracking data directly to the insights dashboard API
+export const FALLBACK_URL =
+  (typeof process !== 'undefined' &&
+    (process as any).env?.NEXT_PUBLIC_FALLBACK_URL) ||
+  'https://insights.aaigc.online/api/track'
