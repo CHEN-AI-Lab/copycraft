@@ -9,8 +9,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:light": "pnpm vitest run --pool=forks --poolOptions.forks.singleFork --maxWorkers=1",
     "typecheck": "pnpm --filter web exec -- tsc --noEmit && pnpm --filter shared exec -- tsc --noEmit",
     "check": "pnpm typecheck && pnpm lint && pnpm test",
+    "check:json": "python3 scripts/check-json.py",
+    "check:light": "pnpm check:json && pnpm typecheck && pnpm test:light",
     "setup": "pnpm install",
     "deploy": "echo 'Deploy: push to GitHub, import in Vercel'"
   },

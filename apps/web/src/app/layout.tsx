@@ -1,4 +1,5 @@
-import type { Metadata } from 'next'
+import { Metadata } from 'next'
+import VisitTracker from '@/components/VisitTracker'
 
 export const metadata: Metadata = {
   title: 'CopyCraft - AI Copywriting Tool',
@@ -16,5 +17,10 @@ export const metadata: Metadata = {
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return children
+  return (
+    <>
+      <VisitTracker />
+      {children}
+    </>
+  )
 }
