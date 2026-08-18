@@ -2,14 +2,15 @@
 # =============================================================================
 # link-envs.sh — Distribute credentials from global.env to per-app env files
 # =============================================================================
-# Source of truth: /home/ubuntu/workspace/global.env
+# Source of truth: global.env (in workspace root, resolved relative to this script)
 # Reads from it and writes to each app's env file.
 # Run:  bash scripts/link-envs.sh
 # =============================================================================
 
 set -euo pipefail
 
-GLOBAL_ENV="/home/ubuntu/workspace/global.env"
+PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+GLOBAL_ENV="$PROJECT_ROOT/../.shared/global.env"
 
 if [ ! -f "$GLOBAL_ENV" ]; then
   echo "Error: $GLOBAL_ENV not found" >&2
@@ -21,8 +22,6 @@ _env() {
   local key="$1"
   grep "^${key}=" "$GLOBAL_ENV" | head -1 | cut -d= -f2-
 }
-
-PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 # ════════════════════════════════════════════════════════════════════════════
 # Web (Next.js) — apps/web/.env.local
